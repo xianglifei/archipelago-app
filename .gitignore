@@ -15,3 +15,6 @@ dist/
 
 # 官网部署脚本临时组装的产物目录(scripts/website-deploy.mjs)
 website/.site/
+
+# 项目内部记忆(文档化,任何 agent 可读;永不进入公开仓)
+/PROJECT-MEMORY.md

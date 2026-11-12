@@ -2,6 +2,8 @@
 
 本仓 = 群岛客户端(Electron)+ 官网(静态三页+邀请落地页 Worker),Apache-2.0 开源。服务端(Cloudflare Worker/D1/R2+运营后台)在私有仓 `xianglifei/archipelago-cloud`,不在本仓也不在本文件描述范围。
 
+> **内部项目上下文**:项目记忆/当前状态/挂账见仓库根 `PROJECT-MEMORY.md`(本地私有,gitignore,不随公开仓分发);完整决策与轮次记录见 `doc/进度追踪.md`(同为本地内部文档)。
+
 ## 质量闸(写完码必跑)
 
 `npm run verify` = typecheck(node+web+test 三工程) + vitest(unit+integration) + eslint。CI 每个 PR/main 推送跑同链。
