@@ -1,6 +1,8 @@
 // 头像素材管线(0.7):从设计稿 HTML 提取 28 造型×4 配色底座 + 12 眼睛 PNG,
 // 缩到 256px(macOS sips)并 pngquant 有损压缩,产出到 renderer 资产目录;
 // 512 原档同时归档到 doc/design-assets/avatars-512/。
+// 仅维护者重建素材用:依赖本机 pngquant(GPL,不在本仓依赖中,需 brew install pngquant 或 npm i -g pngquant-bin)
+// 与本机设计原稿;产物已入库,开发者与构建无需运行本脚本。
 // 用法: node scripts/prepare-avatars.mjs [--src ~/Downloads/Qundao_UI_v2.html]
 // 产物入库后无需 CI 重跑;重新生成时整个目录会被覆盖。
 import { execFileSync } from 'node:child_process'

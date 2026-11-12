@@ -103,7 +103,7 @@ if (!anchorRe.test(html)) {
   fail(
     'website/download.html 里找不到激活态 Mac 下载按钮(<a class="download-action" href=…>)。' +
       '多半是设计稿重建(build_site.py)把按钮还原成了「待配置」disabled 态——' +
-      '按 design-kit/website-2026-11-02/本地修改记录.md 恢复激活态标记(文案「下载 Mac 版 ↓」的 a 标签 + meta 去「待配置」)后重试;' +
+// (视觉定稿激活态标记已在 download.html;若被还原为「待配置」disabled 态,按上方报错恢复后重试。原设计归档在内部设计库,不在本公开仓。)
       '状态行文字随意恢复,本脚本会自动重写为「v<版本> · Apple Silicon」。'
   )
 }

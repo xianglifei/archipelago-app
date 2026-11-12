@@ -1,0 +1,11 @@
+# NOTICE — 素材与商标说明(2026-11-12 拍板,选项 C)
+
+本仓库**源代码**按 Apache-2.0 许可证发布(见 LICENSE)。
+
+以下内容**不包含在 Apache-2.0 授权范围内**,随本仓库分发仅供配合群岛项目整体使用,未经版权方许可不得脱离项目单独复制、修改或再分发:
+
+- `resources/`、`build/` —— 应用图标
+- `src/renderer/src/assets/` —— 头像造型与眼睛原画及其衍生图
+- `website/assets/`、`website/invite-hero.webp` —— 官网与邀请落地页插画
+
+「群岛」「Archipelago」名称与相关标识亦不在 Apache-2.0 授权范围内,社区构建请使用自己的名称与标识。
