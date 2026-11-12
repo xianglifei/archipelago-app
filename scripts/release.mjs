@@ -2,7 +2,7 @@
 // 发布脚本(升级机制:第一阶段 update.json/DMG + 第二阶段 electron-updater zip 原地更新):
 //   1. 校验更新源与产物:build.publish 与 src/main/updater.ts 两处 URL 一致且非占位域名
 //   1.5 cloud 部署联动门禁:对比 cloud/ 源码指纹与本机部署台账(scripts/cloud-deploy-state.mjs),
-//       cloud 有未部署改动(或本机无台账)即拦下发版——本版客户端若依赖 cloud 变更,先 cd cloud && npm run deploy;
+//       (拆仓后本仓不含 cloud 源码;历史指纹门禁已摘,现行门禁=下方 1.5b 能力版本门禁。)
 //       确认无关用 --cloud-pending-ok 显式跳过。这是机制不是提醒:换任何 session/agent 发版都会撞上同一道门。
 //   2. 校验 CHANGELOG.md 已把 [未发布] 归档为当前版本小节,并取其中 <!--user-notes--> 块作为更新日志
 //      (该块是面向用户的清洗版:新增在前修复在后、每行一条、只说做了什么,不写原因/历史/技术手段;
@@ -125,7 +125,7 @@ if (gate.verdict === 'pass') {
     console.error(`   检查目标:${gateUrl};线上 deploy=${JSON.stringify(gate.online.deploy)};缺失 ${gate.missing.length} 项:${gate.missing.map((m) => m.name).join(', ')}`)
     console.error('   豁免意味着本版可能在缺能力的线上运行对应功能劣化/不可用——发版后尽快补部署。')
   } else {
-    console.error('  先 cd cloud && npm run deploy 部署新能力(部署链会自动核验线上=本地)再发版;')
+    console.error('  先在服务端仓(xianglifei/archipelago-cloud)执行 npm run deploy 部署新能力(部署链自动核验线上=本地)再发版;')
     console.error('  确认本版不依赖缺失能力:npm run release -- --cloud-pending-ok(豁免会被留痕打印)。')
     fail('能力版本门禁:线上缺本产物所需能力(见上)。')
   }

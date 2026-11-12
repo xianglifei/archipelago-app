@@ -24,13 +24,14 @@ export function evaluateCapabilitiesResponse(httpStatus, bodyText) {
   } catch {
     return { verdict: 'blocked', reason: 'malformed', detail: '响应体不是合法 JSON(可能回落静态资产页)' }
   }
+  if (parsed?.ok !== true) return { verdict: 'blocked', reason: 'malformed', detail: `ok 字段缺失或非 true(线上应答异常)` }
   const online = parsed && typeof parsed === 'object' ? parsed.data : null
   if (!online || typeof online !== 'object') return { verdict: 'blocked', reason: 'malformed', detail: 'JSON 里没有 data 载荷' }
-  if (typeof online.protocolVersion !== 'number') return { verdict: 'blocked', reason: 'malformed', detail: 'protocolVersion 缺失或非数字' }
-  if (typeof online.service !== 'string' || !online.service) return { verdict: 'blocked', reason: 'malformed', detail: 'service 缺失' }
+  if (typeof online.protocolVersion !== 'number' || !Number.isInteger(online.protocolVersion) || online.protocolVersion < 1) return { verdict: 'blocked', reason: 'malformed', detail: 'protocolVersion 缺失/非正整数' }
+  if (online.service !== 'archipelago-sea') return { verdict: 'blocked', reason: 'malformed', detail: `service 应为 archipelago-sea,实际 ${JSON.stringify(online.service)}` }
   if (!online.capabilities || typeof online.capabilities !== 'object') return { verdict: 'blocked', reason: 'malformed', detail: 'capabilities 缺失或非对象' }
-  const capsOk = Object.entries(online.capabilities).every(([, v]) => Number.isFinite(v) && v > 0)
-  if (!capsOk) return { verdict: 'blocked', reason: 'malformed', detail: 'capabilities 存在非正数值项' }
+  const capsOk = Object.entries(online.capabilities).every(([, v]) => Number.isInteger(v) && v > 0)
+  if (!capsOk) return { verdict: 'blocked', reason: 'malformed', detail: 'capabilities 存在非正整数项' }
   return { verdict: 'ok', online }
 }
 

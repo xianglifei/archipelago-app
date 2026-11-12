@@ -34,6 +34,11 @@ describe('evaluateCapabilitiesResponse:HTTP/形状分级(终审第 8 条)', () =
   it('200 合法 JSON 但无 data 载荷 → blocked malformed', () => {
     expect(evaluateCapabilitiesResponse(200, JSON.stringify({ ok: true }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
   })
+  it('收紧(终检补):ok:false / service 不符 / 小数能力值 → blocked malformed', () => {
+    expect(evaluateCapabilitiesResponse(200, JSON.stringify({ ok: false, data: ONLINE }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
+    expect(evaluateCapabilitiesResponse(200, body({ ...ONLINE, service: 'wrong-service' }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
+    expect(evaluateCapabilitiesResponse(200, body({ ...ONLINE, capabilities: { x: 1.5 } }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
+  })
   it('protocolVersion 缺失/capabilities 非对象/含非正数值 → blocked malformed', () => {
     expect(evaluateCapabilitiesResponse(200, body({ service: 'x', capabilities: {} }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
     expect(evaluateCapabilitiesResponse(200, body({ protocolVersion: 1, service: 'x' }))).toMatchObject({ verdict: 'blocked', reason: 'malformed' })
