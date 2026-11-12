@@ -1,0 +1,40 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="d2-sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6BC8E8"/>
+      <stop offset="1" stop-color="#3D9BD6"/>
+    </linearGradient>
+    <filter id="d2-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0B5E86" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- 海域 -->
+  <rect width="1024" height="1024" rx="230" fill="url(#d2-sea)"/>
+
+  <!-- 俯瞰一座岛:浅滩→沙滩→草地,河流蜿蜒出海 -->
+  <g filter="url(#d2-soft)">
+    <circle cx="512" cy="512" r="368" fill="#A8E4F0"/>
+    <circle cx="512" cy="512" r="315" fill="#F2E0A8"/>
+    <circle cx="512" cy="512" r="268" fill="#8CD652"/>
+    <path d="M 470 400 C 560 470 430 570 500 660 C 560 735 655 745 712 838" fill="none" stroke="#4FB4E0" stroke-width="54" stroke-linecap="round"/>
+  </g>
+
+  <!-- 树(避开河流路径) -->
+  <g>
+    <circle cx="415" cy="420" r="46" fill="#4E9C2E"/>
+    <circle cx="401" cy="406" r="17" fill="#6BB838"/>
+    <circle cx="612" cy="382" r="46" fill="#4E9C2E"/>
+    <circle cx="598" cy="368" r="17" fill="#6BB838"/>
+    <circle cx="372" cy="628" r="46" fill="#4E9C2E"/>
+    <circle cx="358" cy="614" r="17" fill="#6BB838"/>
+  </g>
+
+  <!-- 海面波浪 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" opacity="0.85">
+    <path d="M 118 208 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 742 172 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 122 856 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 748 828 q 42 -30 84 0 q 42 30 84 0"/>
+  </g>
+</svg>

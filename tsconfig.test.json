@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2023"],
+    "types": ["node", "vitest", "@cloudflare/workers-types"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"]
+    }
+  },
+  "include": ["tests/**/*.ts", "src/**/*.d.ts"],
+  // exclude:autolink 集成测试 import 渲染层 tsx 组件(Markdown.tsx),会把 DOM 类型链拉进本工程
+  // (node+workers-types 混域刻意无 DOM);vitest 走 esbuild 转译不需要 tsc,仅 typecheck 跳过它
+  "exclude": [
+    "tests/unit/md-autolink-integration.test.ts"
+  ]
+}

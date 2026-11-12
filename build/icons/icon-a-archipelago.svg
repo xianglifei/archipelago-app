@@ -1,0 +1,26 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7CD0E6"/>
+      <stop offset="1" stop-color="#3F9FD4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 海域(squircle 背景) -->
+  <rect x="0" y="0" width="1024" height="1024" rx="230" fill="url(#sea)"/>
+
+  <!-- 主岛 -->
+  <ellipse cx="380" cy="660" rx="285" ry="165" fill="#9BCB5C"/>
+  <ellipse cx="320" cy="560" rx="115" ry="80" fill="#6FAA4B"/>
+
+  <!-- 小岛 -->
+  <ellipse cx="800" cy="770" rx="155" ry="90" fill="#9BCB5C"/>
+  <ellipse cx="782" cy="702" rx="58" ry="40" fill="#6FAA4B"/>
+
+  <!-- 波浪 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="round" opacity="0.85">
+    <path d="M130 370 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M660 430 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M560 890 q 42 -30 84 0 q 42 30 84 0"/>
+  </g>
+</svg>

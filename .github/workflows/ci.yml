@@ -1,0 +1,33 @@
+# 客户端仓 CI:typecheck(含双语双闸)+ lint + vitest + 构建冒烟。
+# cloud 检查已随拆仓迁至 archipelago-cloud 仓的 CI(2026-11-12);
+# Electron 专项(electron.yml)手动/每日触发,发版前必须跑过并留证(私有仓 macOS 分钟按 10 倍计费;转公开后按公开仓规则核算)。
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+          cache: npm
+      - run: npm ci
+      - name: typecheck(node+web+test,含双语双闸)
+        run: npm run typecheck
+      - name: "lint(ESLint bug 类规则,含 tests 与 scripts)"
+        run: npm run lint
+      - name: "行为回归(vitest: unit + integration)"
+        run: npm run test
+      - name: electron-vite build
+        run: npx electron-vite build

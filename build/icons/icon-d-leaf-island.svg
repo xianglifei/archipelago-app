@@ -1,0 +1,47 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="d1-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9BE0F2"/>
+      <stop offset="1" stop-color="#4FB4E0"/>
+    </linearGradient>
+    <linearGradient id="d1-leaf" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8CD652"/>
+      <stop offset="1" stop-color="#6BB838"/>
+    </linearGradient>
+    <filter id="d1-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#0B5E86" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <!-- 动森粉青天空 -->
+  <rect width="1024" height="1024" rx="230" fill="url(#d1-sky)"/>
+
+  <!-- 胖云(右上,平衡左下的叶柄) -->
+  <g fill="#FFFFFF" opacity="0.92">
+    <ellipse cx="812" cy="240" rx="98" ry="43"/>
+    <circle cx="777" cy="209" r="39"/>
+    <circle cx="845" cy="206" r="33"/>
+  </g>
+
+  <!-- 叶岛(动森之叶,微微倾斜,贴纸感软阴影) -->
+  <g transform="translate(26,-14) rotate(-5 512 540)" filter="url(#d1-soft)">
+    <path d="M 512 235 C 372 330 288 462 288 565 C 288 706 392 800 512 810 C 632 800 736 706 736 565 C 736 462 652 330 512 235 Z" fill="url(#d1-leaf)"/>
+    <rect x="496" y="786" width="32" height="116" rx="16" fill="#4E9C2E"/>
+  </g>
+  <g transform="translate(26,-14) rotate(-5 512 540)" fill="none" stroke="#4E9C2E" stroke-linecap="round">
+    <path d="M 512 345 L 512 725" stroke-width="28"/>
+    <path d="M 512 448 Q 448 462 418 505" stroke-width="22"/>
+    <path d="M 512 548 Q 452 562 427 603" stroke-width="22"/>
+    <path d="M 512 645 Q 458 659 438 697" stroke-width="22"/>
+    <path d="M 512 448 Q 576 462 606 505" stroke-width="22"/>
+    <path d="M 512 548 Q 572 562 597 603" stroke-width="22"/>
+    <path d="M 512 645 Q 566 659 586 697" stroke-width="22"/>
+  </g>
+
+  <!-- 海面波浪 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" opacity="0.85">
+    <path d="M 118 830 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 716 872 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 138 350 q 42 -30 84 0 q 42 30 84 0"/>
+  </g>
+</svg>

@@ -1,0 +1,17 @@
+node_modules/
+out/
+dist/
+*.log
+.DS_Store
+.husky/_/
+.wrangler/
+
+# 内部文档与工作产物,不纳入版本管理
+/doc/
+/design-kit/
+/minutes/
+.zcode/
+
+
+# 官网部署脚本临时组装的产物目录(scripts/website-deploy.mjs)
+website/.site/

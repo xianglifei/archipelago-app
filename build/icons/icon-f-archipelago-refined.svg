@@ -1,0 +1,47 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="d3-sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A5E3F5"/>
+      <stop offset="1" stop-color="#58BCE6"/>
+    </linearGradient>
+    <filter id="d3-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#0B5E86" flood-opacity="0.22"/>
+    </filter>
+  </defs>
+
+  <!-- 天空 -->
+  <rect width="1024" height="1024" rx="230" fill="url(#d3-sky)"/>
+
+  <!-- 胖云 -->
+  <g fill="#FFFFFF" opacity="0.94">
+    <ellipse cx="200" cy="220" rx="100" ry="44"/>
+    <circle cx="164" cy="188" r="40"/>
+    <circle cx="234" cy="185" r="34"/>
+  </g>
+
+  <!-- 大岛:浅滩→沙滩→草地→山丘→树 -->
+  <g filter="url(#d3-soft)">
+    <ellipse cx="380" cy="648" rx="335" ry="196" fill="#9EDFEF"/>
+    <ellipse cx="380" cy="645" rx="297" ry="172" fill="#F2E0A8"/>
+    <ellipse cx="380" cy="642" rx="264" ry="149" fill="#8CD652"/>
+    <ellipse cx="326" cy="572" rx="106" ry="68" fill="#5FAF3C"/>
+    <rect x="315" y="528" width="22" height="82" rx="11" fill="#8A6A4A"/>
+    <circle cx="326" cy="500" r="54" fill="#4E9C2E"/>
+    <circle cx="308" cy="482" r="19" fill="#6BB838"/>
+  </g>
+
+  <!-- 小岛 -->
+  <g filter="url(#d3-soft)">
+    <ellipse cx="800" cy="772" rx="188" ry="106" fill="#9EDFEF"/>
+    <ellipse cx="800" cy="772" rx="161" ry="89" fill="#F2E0A8"/>
+    <ellipse cx="800" cy="772" rx="138" ry="73" fill="#8CD652"/>
+    <ellipse cx="778" cy="733" rx="52" ry="33" fill="#5FAF3C"/>
+  </g>
+
+  <!-- 海面波浪 -->
+  <g fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" opacity="0.85">
+    <path d="M 648 420 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 130 900 q 42 -30 84 0 q 42 30 84 0"/>
+    <path d="M 560 922 q 42 -30 84 0 q 42 30 84 0"/>
+  </g>
+</svg>

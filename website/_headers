@@ -1,0 +1,9 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+/
+  Cache-Control: public, max-age=300
+/download.html
+  Cache-Control: public, max-age=300
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

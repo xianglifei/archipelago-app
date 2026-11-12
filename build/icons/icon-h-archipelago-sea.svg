@@ -1,0 +1,78 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 海:近处奶青绿松 → 远处深海蓝(斜向,呼应大气透视) -->
+    <linearGradient id="arch-sea" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#6FD0C4"/>
+      <stop offset="0.45" stop-color="#3FA8A8"/>
+      <stop offset="1" stop-color="#1E5F9E"/>
+    </linearGradient>
+    <filter id="arch-soft" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#0C3D5C" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <rect width="1024" height="1024" rx="230" fill="url(#arch-sea)"/>
+
+  <!-- 海面日光带(玻璃海质感) -->
+  <rect x="380" y="726" width="300" height="24" rx="12" fill="#FFFFFF" opacity="0.14" transform="rotate(-16 530 738)"/>
+  <rect x="180" y="356" width="170" height="18" rx="9" fill="#FFFFFF" opacity="0.1" transform="rotate(-16 265 365)"/>
+
+  <!-- ===== 主岛(近景最大,左下):光环 → 岛体 → 顶面高光 ===== -->
+  <g transform="translate(400 660) scale(1.38) translate(-400 -660)">
+    <path d="M 400 540 C 480 545, 555 590, 560 660 C 565 725, 500 775, 430 780 C 355 785, 270 760, 250 690 C 232 625, 300 535, 400 540 Z" fill="#A9EDE2"/>
+  </g>
+  <g filter="url(#arch-soft)">
+    <path d="M 400 540 C 480 545, 555 590, 560 660 C 565 725, 500 775, 430 780 C 355 785, 270 760, 250 690 C 232 625, 300 535, 400 540 Z" fill="#3E7A3A" stroke="#EDF8F1" stroke-width="6"/>
+  </g>
+  <g transform="translate(400 622) scale(0.82 0.62) translate(-400 -660)">
+    <path d="M 400 540 C 480 545, 555 590, 560 660 C 565 725, 500 775, 430 780 C 355 785, 270 760, 250 690 C 232 625, 300 535, 400 540 Z" fill="#54994A"/>
+  </g>
+  <!-- 主岛丛林树冠(深绿圆点) -->
+  <circle cx="316" cy="646" r="24" fill="#2E5B2A"/>
+  <circle cx="478" cy="668" r="19" fill="#2E5B2A"/>
+  <circle cx="368" cy="700" r="15" fill="#2E5B2A"/>
+
+  <!-- 岛主之帐(全图唯一暖色焦点,立于主岛顶面) -->
+  <g filter="url(#arch-soft)">
+    <polygon points="338,694 400,584 462,694" fill="#F2C94C" stroke="#F2C94C" stroke-width="20" stroke-linejoin="round"/>
+    <path d="M 380 694 Q 400 650 420 694 Z" fill="#7A5B36"/>
+    <circle cx="400" cy="586" r="8" fill="#D9A82E"/>
+  </g>
+
+  <!-- ===== 中岛A(主岛右上水道对面) ===== -->
+  <g transform="translate(715 505) scale(1.4) translate(-715 -505)">
+    <path d="M 715 455 C 770 460, 800 490, 795 525 C 790 560, 745 575, 705 570 C 665 565, 640 535, 650 500 C 658 470, 675 452, 715 455 Z" fill="#8CD8CE"/>
+  </g>
+  <path d="M 715 455 C 770 460, 800 490, 795 525 C 790 560, 745 575, 705 570 C 665 565, 640 535, 650 500 C 658 470, 675 452, 715 455 Z" fill="#41806E" stroke="#E2F4EC" stroke-width="5"/>
+  <circle cx="700" cy="505" r="14" fill="#2E5B2A"/>
+
+  <!-- ===== 中岛B(主岛左上) ===== -->
+  <g transform="translate(210 430) scale(1.38) translate(-210 -430)">
+    <path d="M 210 390 C 250 395, 275 420, 270 450 C 265 480, 225 492, 192 486 C 160 480, 145 452, 155 425 C 163 402, 180 387, 210 390 Z" fill="#8CD8CE"/>
+  </g>
+  <path d="M 210 390 C 250 395, 275 420, 270 450 C 265 480, 225 492, 192 486 C 160 480, 145 452, 155 425 C 163 402, 180 387, 210 390 Z" fill="#41806E" stroke="#E2F4EC" stroke-width="5"/>
+  <circle cx="198" cy="432" r="11" fill="#2E5B2A"/>
+
+  <!-- ===== 小岛C(递减链) ===== -->
+  <g transform="translate(598 318) scale(1.45) translate(-598 -318)">
+    <path d="M 598 288 C 632 291, 650 308, 646 326 C 642 344, 618 352, 594 348 C 571 344, 558 328, 564 310 C 569 295, 580 286, 598 288 Z" fill="#74C4CE"/>
+  </g>
+  <path d="M 598 288 C 632 291, 650 308, 646 326 C 642 344, 618 352, 594 348 C 571 344, 558 328, 564 310 C 569 295, 580 286, 598 288 Z" fill="#4E8A97" stroke="#D6EDF0" stroke-width="4"/>
+
+  <!-- ===== 远岛D(更小更淡,混入海色) ===== -->
+  <g transform="translate(792 252) scale(1.4) translate(-792 -252)">
+    <path d="M 792 230 C 818 233, 832 246, 828 260 C 824 274, 806 280, 788 276 C 770 272, 762 258, 768 245 C 772 234, 778 228, 792 230 Z" fill="#5FA8BC"/>
+  </g>
+  <path d="M 792 230 C 818 233, 832 246, 828 260 C 824 274, 806 280, 788 276 C 770 272, 762 258, 768 245 C 772 234, 778 228, 792 230 Z" fill="#5E97A5" stroke="#CDE6EC" stroke-width="3.5"/>
+
+  <!-- ===== 极远小点E/F(海平线方向的剪影) ===== -->
+  <ellipse cx="672" cy="188" rx="20" ry="12" fill="#5FA8BC"/>
+  <ellipse cx="856" cy="182" rx="13" ry="8" fill="#5E93AC"/>
+  <ellipse cx="128" cy="598" rx="17" ry="11" fill="#74C4CE"/>
+
+  <!-- ===== 近景小岛G(左下,呼应右上远点) ===== -->
+  <g transform="translate(150 808) scale(1.45) translate(-150 -808)">
+    <path d="M 150 788 C 172 790, 184 800, 181 812 C 178 824, 162 830, 147 827 C 132 824, 124 812, 130 801 C 134 792, 140 787, 150 788 Z" fill="#A9EDE2"/>
+  </g>
+  <path d="M 150 788 C 172 790, 184 800, 181 812 C 178 824, 162 830, 147 827 C 132 824, 124 812, 130 801 C 134 792, 140 787, 150 788 Z" fill="#3E7A3A" stroke="#EDF8F1" stroke-width="4"/>
+</svg>

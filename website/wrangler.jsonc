@@ -1,0 +1,21 @@
+// 官网部署配置(2026-11-03 起混合形态):index/download 两页仍走 static assets;
+// 新增 main=invite-landing.js——静态资产未命中的请求(如 /i/<六位码>)交给它渲染邀请落地页(查 D1)。
+// 域名接线在这份配置里=进 git:apex + www 两个 Custom Domain(wrangler deploy 自动建 DNS 与证书)。
+// 与 cloud/ 的 worker(wrangler.toml,sea/api/usage 三子域)互不相干,各自独立部署;
+// 不绑 D1(账号侧「新建 Worker 绑 D1」被 10181 拒),数据走 sea 免登录端点 GET /post/invites/landing。
+// 部署入口:npm run website:deploy(scripts/website-deploy.mjs,会把下载按钮指向最新 DMG 再部署)。
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "archipelago-website",
+  "main": "invite-landing.js",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    // 部署脚本临时组装的产物目录(含 index.html/download.html/_headers/invite-hero.webp),不进 git
+    "directory": "./.site",
+    "not_found_handling": "none"
+  },
+  "routes": [
+    { "pattern": "qundao.app", "custom_domain": true },
+    { "pattern": "www.qundao.app", "custom_domain": true }
+  ]
+}

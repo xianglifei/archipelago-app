@@ -1,0 +1,298 @@
+/* Markdown 消息渲染 · 排版基线参考 Cherry Studio markdown.css / NextChat markdown.scss */
+
+.md {
+  line-height: 1.7;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* 首末子元素 margin 清零,气泡上下不留白 */
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+.md p {
+  margin: 0.45em 0;
+}
+
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  font-weight: 650;
+  line-height: 1.35;
+  margin: 0.9em 0 0.4em;
+}
+
+.md h1 {
+  font-size: 1.22em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+
+.md h2 {
+  font-size: 1.14em;
+  padding-bottom: 0.25em;
+  border-bottom: 1px solid var(--border);
+}
+
+.md h3 {
+  font-size: 1.06em;
+}
+
+.md h4,
+.md h5,
+.md h6 {
+  font-size: 1em;
+}
+
+/* 列表:marker 悬挂在内容盒外,不顶着气泡内边距 */
+.md ul,
+.md ol {
+  padding-inline-start: 1.45em;
+  margin: 0.45em 0;
+}
+
+.md li {
+  margin: 0.22em 0;
+}
+
+.md li > ul,
+.md li > ol {
+  margin: 0.2em 0;
+}
+
+.md li::marker {
+  color: var(--muted);
+}
+
+/* GFM 任务列表 */
+.md ul.contains-task-list {
+  list-style: none;
+  padding-inline-start: 0.3em;
+}
+
+.md input[type='checkbox'] {
+  accent-color: var(--accent);
+  margin-right: 4px;
+  vertical-align: -1.5px;
+}
+
+.md blockquote {
+  margin: 0.5em 0;
+  padding: 2px 2px 2px 12px;
+  border-left: 2.5px solid var(--accent);
+  border-radius: 0 4px 4px 0;
+  background: rgba(47, 107, 99, 0.04);
+  color: var(--muted);
+}
+
+.md blockquote p {
+  margin: 0.3em 0;
+}
+
+/* 行内代码:断行处两侧都有背景(box-decoration-break) */
+.md :not(pre) > code {
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  background: rgba(47, 107, 99, 0.08);
+  border: 1px solid rgba(47, 107, 99, 0.14);
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+.md a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.md hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+
+/* ---------- 表格:横向滚动 + hover 复制 ---------- */
+
+.md-table-wrap {
+  position: relative;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.6em 0;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.md table {
+  border-collapse: collapse;
+  width: max-content;
+  max-width: 100%;
+  font-size: 0.95em;
+}
+
+.md th,
+.md td {
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.md th:last-child,
+.md td:last-child {
+  border-right: none;
+}
+
+.md tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.md th {
+  background: #f8f8fa;
+  font-weight: 600;
+  font-size: 0.92em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.md-table-copy {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  opacity: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  transition: opacity 0.15s;
+}
+
+.md-table-wrap:hover .md-table-copy {
+  opacity: 1;
+}
+
+.md-table-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- 代码块:头部栏 + 暗色底 + 横向滚动 ---------- */
+
+.code-block {
+  margin: 0.6em 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #0d1117;
+  max-width: 100%;
+}
+
+.code-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px 4px 12px;
+  background: rgba(255, 255, 255, 0.045);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.code-block-lang {
+  color: #8b949e;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.code-block-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #8b949e;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.code-block-copy:hover {
+  color: #e6edf3;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.code-block-body {
+  overflow-x: auto;
+}
+
+.code-block-body pre {
+  margin: 0;
+  padding: 12px 14px;
+  background: transparent;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #e6edf3;
+  tab-size: 2;
+}
+
+.code-block-body pre code {
+  display: block;
+  white-space: pre;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: inherit;
+  font-family: inherit;
+}
+
+/* shiki 输出的高亮 pre 与上面的兜底样式对齐 */
+.code-block-body pre.shiki {
+  margin: 0;
+  padding: 12px 14px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.code-block-body pre.shiki code {
+  display: block;
+  white-space: pre;
+}
+
+/* ---------- KaTeX ---------- */
+
+.md .katex-display {
+  margin: 0.6em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 2px 0;
+}
+
+/* ---------- 流式光标:挂在最后一个块的末尾,随文字生长 ---------- */
+
+.md.streaming > :last-child::after {
+  content: '▍';
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--accent);
+  animation: blink 0.9s step-end infinite;
+}
+
+/* 气泡里出现代码块/表格时自动放宽,避免内容被 78% 的 max-width 挤压 */
+.msg.assistant:has(.code-block),
+.msg.assistant:has(.md-table-wrap) {
+  max-width: min(96%, 860px);
+}

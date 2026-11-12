@@ -1,0 +1,24 @@
+# 每次推送必须同步更新 README.md 与 CHANGELOG.md(紧急情况可用 git push --no-verify 绕过)
+if ! git rev-parse --verify --quiet "@{push}" >/dev/null 2>&1; then
+  exit 0
+fi
+
+changed=$(git diff --name-only "@{push}"..HEAD)
+
+if ! printf '%s\n' "$changed" | grep -qx 'README.md'; then
+  echo "✗ 本次推送未更新 README.md —— 请先补充说明再推送" >&2
+  exit 1
+fi
+
+if ! printf '%s\n' "$changed" | grep -qx 'CHANGELOG.md'; then
+  echo "✗ 本次推送未更新 CHANGELOG.md —— 请在 [未发布] 小节记录本次变更" >&2
+  exit 1
+fi
+
+# 软提醒(不阻断):功能代码推送时,若该功能需要 cloud 配合/D1 迁移/后台运营配置/发版顺序要求,
+# 应已登记进仓库根 RELEASE-PENDING.md——发版时会被 release.mjs 强制检查拦截。
+if printf '%s\n' "$changed" | grep -qE '^(cloud/|src/)'; then
+  echo "ℹ 本次推送含功能代码(cloud/ 或 src/):若该功能需要 cloud 配合、迁移、后台配置或发版顺序要求,确认已在 RELEASE-PENDING.md 登记(发版时强制检查,漏登记会被拦)" >&2
+fi
+
+exit 0

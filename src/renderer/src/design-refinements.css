@@ -1,0 +1,217 @@
+/* Approved UI review, 2026-10-30. Intentionally scoped to attachments, profile Skills/Tasks
+   and Post. Sidebar, group/resident titles, existing profile entry and global tokens are untouched. */
+.rail-btn .post-dot { top: 5px; right: 5px; font-size: 8px; min-width: 14px; height: 14px; line-height: 11px; box-sizing: border-box; }
+.composer-inbox, .composer-inbox.has-atts { background: #fbfbfd; }
+.attach-strip { gap: 8px; padding: 10px 12px 0; align-items: flex-start; }
+.attach-thumb { width: 72px; height: 72px; border-radius: 8px; }
+.attach-chip { box-sizing: border-box; height: 72px; max-width: min(212px,100%); padding: 0 8px; border-radius: 8px; background: #f3f4f6; }
+.attach-chip-main { height: 100%; gap: 8px; min-width: 0; }
+.attach-chip-main > svg { width: 20px; height: 20px; flex: none; color: #838b94; }
+.attach-chip-copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; }
+.attach-chip-copy small { color: var(--muted); font-size: 10px; font-weight: 400; }
+.attach-chip-name { max-width: 150px; }
+.attach-chip-x { flex: none; }
+.attach-thumb-x { opacity: 1; }
+.msg-images, .msg-att-units { gap: 8px; flex-wrap: wrap; }
+.msg-image, .msg-image img { width: 72px; height: 72px; max-width: 72px; max-height: 72px; object-fit: cover; }
+.msg-att-file { box-sizing: border-box; height: 72px; max-width: 230px; padding: 10px 12px; background: #f3f4f6; color: var(--text); }
+.msg-att-path { background: #f3f4f6; color: #68717c; font-size: 11px; }
+.composer-directory-input { font: inherit; line-height: 1.6; color: var(--text); white-space: pre-wrap; overflow-wrap: anywhere; outline: none; min-height: 44px; max-height: 146px; overflow-y: auto; padding: 10px 46px; user-select: text; }
+.composer-inbox.multi .composer-directory-input { padding: 10px 14px 40px 46px; }
+.composer-directory-token { cursor: pointer; display: inline; box-decoration-break: clone; -webkit-box-decoration-break: clone; padding: 2px 5px; margin: 0 3px; border-radius: 4px; color: #68717c; background: #eef0f3; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 11px; overflow-wrap: anywhere; }
+.composer-sending { position: absolute; right: 10px; bottom: 12px; display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); background: #fbfbfd; }
+.skills-panel .skill-pack { background: #fafafa; border: 1px solid var(--border); border-radius: 10px; padding: 5px 10px; }
+.skills-panel .skill-item.own { box-sizing: border-box; padding: 10px 11px; border: 1px solid var(--border); border-radius: 9px; background: #fdfdfe; min-height: 60px; }
+.skills-panel .skill-item.own .skill-body { min-width: 0; flex: 1; }
+.skills-panel .skill-item.own .skill-name { font-size: 13px; }
+.skills-panel .skill-item.own .skill-desc { font-size: 11px; line-height: 1.5; }
+.skills-disabled { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.profile-action-error { margin: 3px 0; font-size: 12px; color: var(--danger); }
+.tasks-panel { gap: 10px; }
+.tasks-panel .modal-lead { margin-bottom: 0; }
+.tasks-panel .task-item { border: 1px solid var(--border); background: #fdfdfe; padding: 10px 12px; gap: 8px; }
+.tasks-panel .task-body { gap: 3px; }
+.tasks-panel .task-title { font-size: 13px; }
+.tasks-panel .task-schedule { font-size: 11px; }
+.tasks-panel .task-item.archived { opacity: 1; }
+.task-failure { font-size: 11px; color: var(--danger); overflow-wrap: anywhere; }
+.post-view { background: var(--bg); }
+.post-flow { min-height: 0; align-items: stretch; }
+.post-empty { flex-direction: column; gap: 12px; text-align: center; }
+.post-letter { box-sizing: border-box; width: fit-content; min-width: min(400px,50%); max-width: 50%; padding: 12px 14px; overflow-wrap: anywhere; }
+.post-letter.in { background: #fffdf6; }
+.post-letter.out { background: #fbfaf4; }
+.post-letter.system { align-self: flex-start; background: #f6f7f4; }
+.post-letter.friend-card { border-color: var(--border); }
+.post-letter.done { opacity: 1; }
+.post-letter.done:not(:has(.accepted)) { background: #f7f7f5; }
+.post-letter-head { align-items: flex-start; gap: 12px; margin-bottom: 10px; }
+.post-letter-meta { flex: 1; min-width: 0; gap: 4px; padding-top: 3px; }
+.post-letter-meta strong { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.post-letter-meta .post-request-label { align-self: flex-start; font-size: 10px; line-height: 1.3; color: #667761; background: #ebf0e6; border: 1px solid #dce5d5; border-radius: 4px; padding: 2px 5px; }
+.post-resident-badge { align-self: flex-start; margin: 0; font-size: 10px; }
+.post-letter-meta .post-official-badge { align-self: flex-start; margin: 0; }
+.post-letter-body { font-size: 14px; line-height: 1.65; min-width: 0; } /* 14px=对齐聊天气泡正文(body 继承值) */
+.post-letter-body .markdown { min-width: 0; }
+.post-letter-body p { margin: 0 0 6px; }
+.post-letter-body p:last-child { margin-bottom: 0; }
+.post-letter-body pre, .post-letter-body table { overflow-x: auto; }
+.post-letter-body.clamp { max-height: calc(6 * 1.65 * 1em); overflow: hidden; } /* 6 行真实字号(2026-11-06 修复:原 13px 与 14px 正文不符,第 6 行被切半行);展开判断已改比 clientHeight,与此处不再数值耦合 */
+.post-letter-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 12px; min-width: 0; }
+.post-letter-footer .post-letter-ops { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; min-width: 0; }
+.post-letter-footer .post-request-ops { gap: 6px; }
+.post-letter-footer .post-action { font-size: 11px; padding: 4px 8px; }
+.post-postmark { margin-left: auto; flex: none; transform: rotate(-7deg); padding: 3px 7px; border: 1px solid currentColor; border-radius: 3px; color: #71836e; font-size: 10px; line-height: 1.3; background: transparent; white-space: nowrap; }
+.post-letter .post-outcome { font-size: 11px; line-height: 1.6; white-space: normal; }
+.post-more-menu { z-index: 15; min-width: 155px; }
+.post-letter-footer .post-more-menu { left: 0; right: auto; top: auto; bottom: calc(100% + 5px); }
+.post-letter-atts .attach-cards { max-width: 100%; flex-wrap: wrap; }
+.post-letter-atts .attach-card { min-width: 0; max-width: 100%; }
+.post-letter-atts .attach-card-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.postage-stamp { position: relative; display: inline-block; width: 64px; height: calc(64px * 82 / 70); flex: 0 0 64px; transform: rotate(-5deg); }
+.postage-paper { position: absolute; inset: 0; width: 100%; height: 100%; }
+.postage-art { position: absolute; left: 10%; top: 8.54%; width: 80%; height: 68.3%; overflow: hidden; }
+.postage-art img { width: 100%; height: 100%; object-fit: cover; }
+.postage-art.fallback { display: flex; align-items: center; justify-content: center; background: var(--stamp-color,#e1e7df); color: #fff; font-size: 20px; font-weight: 600; }
+.postage-brand { position: absolute; bottom: 9%; left: 0; width: 100%; text-align: center; font: 2.88px Georgia,serif; letter-spacing: .768px; color: #7c8f83; }
+.post-compose { padding: 10px 20px 16px; }
+.post-recipient { position: relative; gap: 8px; margin-bottom: 8px; }
+.post-recipient-label { font-size: 11px; color: var(--muted); }
+.post-reply-to { font-size: 12px; font-weight: 500; overflow-wrap: anywhere; }
+.post-select-wrap { position: relative; min-width: 0; max-width: calc(100% - 75px); }
+.post-recipient-select { display: flex; align-items: center; gap: 18px; max-width: 100%; color: var(--text); border: 1px solid var(--border); border-radius: 7px; background: var(--panel); padding: 6px 9px; text-align: left; font-size: 12px; cursor: pointer; }
+.post-recipient-select svg { flex: none; color: var(--muted); }
+.post-select-options { position: absolute; bottom: calc(100% + 6px); left: 0; min-width: 240px; max-width: min(360px,65vw); max-height: 240px; overflow-y: auto; padding: 4px; background: var(--panel); border: 1px solid var(--border); box-shadow: var(--shadow-modal); border-radius: 9px; z-index: 20; }
+.post-select-options button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; border-radius: 6px; padding: 8px 10px; background: none; color: var(--text); cursor: pointer; text-align: left; }
+.post-select-options button:hover, .post-select-options button:focus-visible { background: var(--soft); }
+.post-select-options small { color: var(--muted); }
+.post-select-options svg { margin-left: auto; color: var(--accent); }
+.post-invite { width: 352px; background: var(--bg); max-height: calc(100vh - 48px); overflow-y: auto; }
+.post-invite-body { gap: 12px; }
+.post-invite-gen { text-align: center; padding: 6px 0; }
+.post-invite-gen p { margin-bottom: 14px; }
+.post-invite-qr { width: 184px; height: 184px; border-radius: 8px; }
+.post-invite-link-row { display: flex; align-items: center; gap: 6px; }
+.post-invite-link { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; user-select: text; text-align: left; font-size: 10px; }
+.post-invite-link-row .post-action { flex: none; padding: 6px 8px; font-size: 11px; }
+.post-copy-notice { margin: -7px 0 0; text-align: right; font-size: 11px; color: var(--accent); }
+.post-invite-notice { margin: 0; }
+.post-invite-actions { flex-wrap: wrap; }
+.post-parsed-name { display: block; text-align: center; margin-bottom: 8px; overflow-wrap: anywhere; }
+.post-invite-parsed > p { font-size: 12px; line-height: 1.6; color: var(--muted); margin-bottom: 12px; }
+.post-invite-parsed .post-invite-input { margin-bottom: 10px; }
+.post-import-block { gap: 8px; }
+@media (max-width: 650px) { .post-empty-cards { flex-wrap: wrap; justify-content: center; } }
+
+/* 2026-10-31: restore the approved R2/R3 structure using production components. */
+.rail-btn .post-dot { top: -1px; right: 1px; font-size: 9px; line-height: 14px; padding: 0 3px; box-shadow: 0 0 0 1.5px var(--rail); }
+.composer-inbox { padding: 10px 12px 7px; }
+.composer-inbox textarea, .composer-inbox.multi textarea { padding: 2px 0 3px; min-height: 29px; }
+.composer-inbox .composer-directory-input, .composer-inbox.multi .composer-directory-input { padding: 2px 0 3px; min-height: 29px; }
+.attach-strip { padding: 0 0 9px; }
+.composer-actions { display: flex; align-items: center; gap: 7px; min-height: 29px; margin-top: 2px; }
+.composer-action-spacer { flex: 1; }
+.composer-actions .icon-btn, .composer-actions .composer-sending { position: static; flex: none; }
+.composer-actions .icon-btn.send, .composer-actions .icon-btn.stop { border-radius: 9px; width: 30px; height: 29px; }
+.attach-chip { position: relative; width: 218px; max-width: 100%; padding: 10px; }
+.attach-chip-x { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--border); background: #fbfbfd; padding: 1px; }
+.msg-images, .msg-att-units { flex-direction: column; align-items: flex-end; }
+.composer-directory-token { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 0 5px; line-height: 20px; vertical-align: middle; }
+.composer-directory-label { min-width: 0; max-width: 34ch; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.composer-directory-remove { border: 0; background: none; color: var(--muted); padding: 0; cursor: pointer; font: inherit; }
+.skills-panel .skill-item.own { position: relative; padding-right: 34px; }
+.skills-panel .skill-actions, .skills-panel .skill-item > .skill-remove { position: absolute; right: 7px; top: 10px; }
+.skills-disabled { border-top: 1px solid var(--border); margin-top: 16px; padding-top: 10px; }
+.tasks-panel .task-item { background: transparent; gap: 9px; }
+.task-card-icon { flex: none; color: var(--accent); margin-top: 2px; }
+.task-outcome { margin-top: 5px; font-size: 11px; line-height: 1.6; color: var(--muted); overflow-wrap: anywhere; }
+.task-outcome.failed { color: var(--warning); }
+.tasks-panel .task-item.archived { opacity: .62; }
+.post-letter-head { gap: 11px; }
+.post-letter-head .post-letter-ops { flex-wrap: wrap; justify-content: flex-end; }
+.post-letter-head .post-request-ops { max-width: 180px; }
+.post-more-menu { right: 0; left: auto; top: calc(100% + 5px); bottom: auto; }
+.post-letter-footer:empty { display: none; }
+.post-letter.done:not(:has(.accepted)) > .post-letter-head, .post-letter.done:not(:has(.accepted)) > .post-letter-body-wrap { opacity: .62; }
+.post-empty h3 { margin: 15px 0 7px; font-size: 15px; color: var(--text); font-weight: 500; }
+.post-empty-envelope { display: inline-flex; border-radius: 50%; background: var(--soft); padding: 17px; color: var(--accent); }
+/* ── 邀请函弹窗(2026-11-03 重做:码为主角/分享图导出/六格输入;视觉定稿=doc/原型 - 客户端邀请界面改造对比) ── */
+.invite-meta { font-size: 11px; color: var(--muted); text-align: center; letter-spacing: 1px; margin: 0; }
+.invite-meta b { color: var(--text); font-weight: 600; }
+.code-row { display: flex; gap: 7px; justify-content: center; background: none; border: 0; padding: 0; cursor: pointer; font: inherit; }
+.code-row span { width: 40px; height: 48px; background: #fff; border: 1.5px solid #cfe7e3; border-radius: 9px;
+  font-size: 26px; font-weight: 700; color: var(--accent); display: flex; align-items: center; justify-content: center;
+  font-variant-numeric: tabular-nums; box-shadow: 0 3px 7px rgba(47, 107, 99, 0.08); }
+.code-row:active span { background: var(--soft); }
+.code-input { cursor: default; }
+.code-input input { width: 40px; height: 48px; background: #fff; border: 1.5px solid #cfe7e3; border-radius: 9px;
+  font: inherit; font-size: 26px; font-weight: 700; color: var(--accent); text-align: center; text-transform: uppercase;
+  outline: none; flex: none; padding: 0; font-variant-numeric: tabular-nums; }
+.code-input input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 107, 99, 0.12); }
+.link-plain { display: block; background: none; border: 0; padding: 0; font: inherit; font-size: 12px;
+  color: var(--muted); text-align: center; cursor: pointer; }
+.link-plain b { color: var(--accent); font-weight: 500; border-bottom: 1px dashed var(--accent); padding-bottom: 1px; }
+.export-row { display: flex; gap: 12px; align-items: center; padding: 10px; background: #f4f8f6; border-radius: 12px; }
+.export-row .thumb { width: 64px; height: 96px; border-radius: 8px; border: 1px solid var(--border); flex: none; display: block; }
+.export-row .post-action { flex: 1; justify-content: center; padding: 8px 12px; font-size: 13px; }
+.export-btns { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.post-card-loading { width: 64px; height: 96px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); flex: none; }
+.imp-input-view { display: flex; flex-direction: column; gap: 22px; }
+.imp-title { font-size: 13px; font-weight: 600; text-align: center; }
+.imp-alt { font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.7; }
+.imp-ok-head { display: flex; align-items: center; justify-content: space-between; }
+.imp-ok-badge { font-size: 11.5px; font-weight: 600; color: var(--accent); }
+.imp-ok-back { background: none; border: 0; padding: 0; font: inherit; font-size: 11px; color: var(--muted); cursor: pointer; }
+.imp-ok-back:hover { color: var(--accent); }
+.imp-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border);
+  border-radius: 12px; background: var(--panel); }
+.imp-card .postage-art { width: 52px; height: 52px; border-radius: 9px; border: 1px solid var(--border); background: #fff; }
+.imp-card .postage-art img { border-radius: 5px; }
+.imp-who b { display: block; font-size: 14px; font-weight: 600; }
+.imp-who span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.post-invite { width: 374px; border: 1px solid var(--border); border-radius: 14px; }
+.post-invite-tabs { padding: 12px 13px 0; gap: 16px; }
+.post-invite-tabs button { font-size: 12px; padding: 10px 0 12px; }
+.post-invite-tabs .post-invite-close { padding: 6px; }
+.post-invite-body { padding: 21px 24px 17px; gap: 0; }
+.post-invite-mine { align-items: center; }
+.post-invite-gen { width: 100%; display: flex; align-items: center; flex-direction: column; }
+.post-invite-illustration { display: inline-flex; padding: 16px; background: var(--soft); color: var(--accent); border-radius: 15px; margin: 1px 0 16px; }
+.post-invite-gen h2 { font-size: 15px; line-height: 1.5; margin: 0 0 8px; font-weight: 600; }
+.post-invite-gen p { font-size: 11px; margin: 0 0 22px; }
+.post-action.wide { width: 100%; min-height: 36px; justify-content: center; }
+.post-action.disabled, .post-qr-import.disabled { opacity: .45; cursor: default; }
+.post-invite-qr-wrap { position: relative; display: grid; place-items: center; width: 194px; height: 194px; padding: 6px; border: 1px solid var(--border); border-radius: 10px; background: #fff; }
+.post-invite-qr { width: 180px; height: 180px; border-radius: 0; }
+.post-invite-qr-wrap.regenerating img { opacity: .13; }
+.post-invite-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 9px; font-size: 11px; color: var(--muted); }
+.post-invite-owner { font-size: 12px; line-height: 1.6; color: var(--muted); margin: 12px 0 16px; overflow-wrap: anywhere; }
+.post-invite-link-row { display: flex; gap: 0; width: 100%; margin-top: 11px; border: 1px solid var(--border); border-radius: 7px; background: #fbfbfd; overflow: hidden; }
+.post-invite-link { flex: 1; width: 0; min-width: 0; padding: 9px; margin: 0; border: 0; border-radius: 0; background: none; font: inherit; font-size: 10px; color: var(--muted); }
+.post-invite-link-row .post-action { border: 0; border-left: 1px solid var(--border); border-radius: 0; background: none; padding: 7px 9px; font-size: 10px; }
+.post-copy-notice { width: 100%; margin: 0; padding: 5px 1px 0; text-align: left; font-size: 11px; }
+.post-regenerate { display: inline-flex; align-items: center; gap: 4px; margin-top: 13px; border: 0; background: none; padding: 0; font: inherit; font-size: 10px; color: var(--muted); cursor: pointer; }
+.post-invite-notice { width: 100%; margin-top: 13px; font-size: 11px; line-height: 1.6; }
+.post-import-body { padding: 18px 22px 22px; }
+.post-import-intro { font-size: 11px; color: var(--muted); margin: 0 0 18px; }
+.post-import-label { display: flex; gap: 6px; align-items: center; margin: 0 0 9px; font-size: 12px; font-weight: 400; }
+.post-import-link-row { display: flex; align-items: stretch; gap: 7px; }
+.post-import-link-row .post-invite-input { flex: 1; min-width: 0; width: 0; margin: 0; padding: 8px 10px; font-size: 11px; }
+.post-import-divider { display: flex; align-items: center; gap: 10px; margin: 17px 0; font-size: 10px; color: var(--muted); }
+.post-import-divider::before, .post-import-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.post-qr-import { display: flex; gap: 11px; align-items: center; width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--accent); cursor: pointer; }
+.post-qr-import > span { flex: 1; }
+.post-qr-import strong { display: block; font-size: 12px; font-weight: 500; }
+.post-qr-import small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+.post-inline-loading { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+.post-parsed-identity { display: flex; align-items: center; gap: 12px; padding: 2px 0 12px; border-bottom: 1px solid var(--border); }
+.post-parsed-identity strong { min-width: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
+.post-invite-parsed > p { margin: 13px 0; font-size: 11px; color: var(--muted); }
+.post-greeting-actions { justify-content: space-between; align-items: center; margin-top: 13px; }
+.post-action.quiet { border: 0; background: none; color: var(--muted); padding-left: 0; }
+.post-invite :is(button,input,textarea,label):focus-visible, .composer-directory-remove:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.postage-art img { object-fit: contain; }
+
+.post-save-notice { color: var(--accent); font-size: 11px; margin: 5px 0 0; }
