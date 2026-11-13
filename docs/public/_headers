@@ -21,6 +21,11 @@
 /api/*
   Cache-Control: public, max-age=300
 
+# 搜索索引是构建期生成的 JSON,但文件名没有扩展名。不显式声明 Content-Type,
+# 边缘会当成不可压缩的二进制直接发(实测 655KB 裸传);声明后走 brotli 只剩 87KB。
+/api/search
+  Content-Type: application/json
+
 /llms.mdx/*
   Cache-Control: public, max-age=300
 
