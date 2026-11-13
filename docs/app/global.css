@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/*
+ * 群岛品牌色(与官网 website/ 同一套):
+ * 主色 青绿 #2F6B63;浅色底 暖白;正文墨色 #203F3B。
+ * 不引入任何 CJK webfont——中文字体动辄几 MB,直接用系统字体栈。
+ */
+@theme {
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Noto Sans CJK SC', 'Source Han Sans SC', 'Segoe UI', Roboto, sans-serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+}
+
+:root {
+  --color-fd-background: #fdfcf9;
+  --color-fd-foreground: #203f3b;
+  --color-fd-muted: #f2f4f1;
+  --color-fd-muted-foreground: #5d6f6a;
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: #203f3b;
+  --color-fd-card: #f4f5f1;
+  --color-fd-card-foreground: #203f3b;
+  --color-fd-border: rgba(32, 63, 59, 0.14);
+  --color-fd-primary: #2f6b63;
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: #eceee9;
+  --color-fd-secondary-foreground: #203f3b;
+  --color-fd-accent: rgba(47, 107, 99, 0.09);
+  --color-fd-accent-foreground: #245c55;
+  --color-fd-ring: #2f6b63;
+}
+
+.dark {
+  --color-fd-background: #101715;
+  --color-fd-foreground: #e4ece8;
+  --color-fd-muted: #17211f;
+  --color-fd-muted-foreground: #9bada7;
+  --color-fd-popover: #141d1b;
+  --color-fd-popover-foreground: #e4ece8;
+  --color-fd-card: #16201e;
+  --color-fd-card-foreground: #e4ece8;
+  --color-fd-border: rgba(228, 236, 232, 0.14);
+  --color-fd-primary: #7fb3a8;
+  --color-fd-primary-foreground: #0b1f1c;
+  --color-fd-secondary: #1b2624;
+  --color-fd-secondary-foreground: #e4ece8;
+  --color-fd-accent: rgba(127, 179, 168, 0.16);
+  --color-fd-accent-foreground: #cfe3dd;
+  --color-fd-ring: #7fb3a8;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}

@@ -1,0 +1,122 @@
+---
+title: 本地开发与质量闸
+description: 从 clone 到跑起来,以及提交前必须过的三道闸。
+updated: '2026-11-13'
+appliesTo: '仓库 main 分支'
+---
+
+这个仓库 = 群岛客户端(Electron)+ 官网静态站 + 本文档站。服务端(Cloudflare Worker / D1 / R2 与运营后台)在**私有仓** `xianglifei/archipelago-cloud`,不在本仓,也不在本文档的描述范围内。
+
+## 前置
+
+- **Node.js 26**(CI 用 26,建议与 CI 对齐)
+- **npm 11**
+- **git**
+- macOS 构建本机包需要 Xcode Command Line Tools;Windows 构建需要对应工具链
+
+## 跑起来
+
+```bash
+git clone https://github.com/xianglifei/archipelago-app.git
+cd archipelago-app
+npm install
+npm run dev
+```
+
+`npm install` 的 `postinstall` 会通过国内镜像下载 Electron 二进制。如果你在墙外,可以去掉镜像环境变量。
+
+## 目录结构
+
+```
+src/
+  main/       主进程:会话、居民、工具、审批、技能、任务、账号、邮局
+  preload/    预加载脚本与 IPC 桥
+  renderer/   渲染层(React),界面三入口:主窗口 / 图片查看器 / Markdown 阅读器
+  shared/     主进程与渲染层共用的纯逻辑与类型
+scripts/      发版链、官网部署、文档站部署、质量闸辅助脚本
+tests/        unit(纯逻辑/源码契约)/ integration(真 TS 函数 + 内存 SQLite)
+website/      官网静态三页 + Worker 落地页
+docs/         本文档站(独立 package.json,不进根 workspace)
+```
+
+**约定:先想清楚代码属于哪一层。** `shared/` 只放无副作用的纯逻辑,主进程与渲染层都能 import;渲染层不许直接碰 Node API。
+
+## 质量闸
+
+提交前必须全绿:
+
+```bash
+npm run verify
+```
+
+它等于三条链串起来:
+
+```bash
+npm run typecheck   # node + web + test 三个 tsconfig 工程
+npm run test        # vitest:unit + integration
+npm run lint        # eslint
+```
+
+CI(`.github/workflows/ci.yml`)在每个 PR 与 main 推送时跑同一条链,外加 `electron-vite build` 冒烟。**PR 红了就是真的坏了,不是 CI 环境问题。**
+
+### TypeScript
+
+- 三个工程全部 `strict` + `noUncheckedIndexedAccess`。
+- `arr[i]` 可能是 `undefined`,取值前要写真守卫。能证明的不变式可以用 `!`,但必须留一行短注释说明为什么安全。**禁止无脑 `!`。**
+- 测试在 `tsconfig.test.json`;payload 深层字段按惯例可以用 `as any` 放行,导入级断裂仍由 typecheck 把关。
+
+### ESLint
+
+- **只开 bug 类规则,零风格规则,不上 Prettier。** 风格 churn 会和并行开发打架。
+- 误报用 `eslint-disable-next-line 规则名 -- 中文理由` 关掉,不许裸 disable。
+
+### i18n 双闸
+
+渲染层**禁止硬编码中文**,界面文案一律走词典:
+
+```ts
+// 1. zh.ts 加词条
+// 2. 组件里 t('section.key')
+// 3. en.ts 同步补(en: typeof zh 会在 typecheck 里强制 parity)
+```
+
+主进程里给用户看的字(菜单 / 系统通知 / 对话框 / About)走 `ui-strings.ts` 的 `uiStr()`。
+
+写完代码 typecheck 就会强制检查两道:扫描硬编码 CJK、校验在用 key 命中词典。
+
+### 测试
+
+- **unit**:纯逻辑,或**源码契约的静态断言**(防漂移)。
+- **integration**:真 TS 函数 + `better-sqlite3` 内存库。
+- 新增行为修复**必须带回归测试**。跨端组合测试不在本仓(服务端测试在私有仓)。
+
+### async 事件处理器
+
+一律写成 `() => void fn()`。把 async 函数直接挂到 `onClick` 这类属性上,抛错会变成未捕获的 rejection。
+
+## 文档站
+
+`docs/` 是独立的 npm 项目(自己的 `package.json` 与 lockfile),Next 工具链不进 Electron 依赖树。
+
+```bash
+npm --prefix docs install
+npm --prefix docs run dev     # http://localhost:3000
+npm --prefix docs run build   # 静态导出到 docs/out
+npm run docs:deploy           # 构建 + wrangler deploy + 线上探活
+```
+
+文档内容在 `docs/content/docs/`,用 MDX 写。中文首发,不挂 i18n 路由。
+
+## 不要跑发版链
+
+`npm run dist`、`npm run release` 属于维护者本机凭据操作(签名 / 公证 / R2 / GitHub Release / 官网同步)。贡献者不需要也不应该跑。CI 不跑发版链。
+
+## 提交前
+
+- `.husky/pre-push` 要求每次推送同时更新 `README.md` 与 `CHANGELOG.md`(纯 `docs/` 改动已豁免)。别用 `--no-verify` 绕过——那是给紧急情况留的。
+- 提交信息用中文写清「改了什么、为什么」。一个 PR 只做一件事。
+
+## 相关
+
+- 写技能卡:[技能卡格式规范](/docs/developers/skill-format)
+- 产品侧的权限模型:[权限与审批](/docs/concepts/permissions)

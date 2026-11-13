@@ -1,0 +1,37 @@
+# Cloudflare Workers 静态资产响应头(out/ 里随 public/ 一起拷出)
+# 注意:只支持 # 注释;同一路径命中的多条规则会合并同名头,
+# 所以 Cache-Control 必须按路径分开写,别在 /* 里写——否则会盖掉 immutable。
+
+/_next/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# 安全头(所有路径)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: SAMEORIGIN
+
+# 页面与内容:短缓存,发新版最多 5 分钟后生效
+/
+  Cache-Control: public, max-age=300
+
+/docs*
+  Cache-Control: public, max-age=300
+
+/api/*
+  Cache-Control: public, max-age=300
+
+/llms.mdx/*
+  Cache-Control: public, max-age=300
+
+/llms.txt
+  Cache-Control: public, max-age=300
+
+/llms-full.txt
+  Cache-Control: public, max-age=300
+
+/sitemap.xml
+  Cache-Control: public, max-age=300
+
+/robots.txt
+  Cache-Control: public, max-age=300

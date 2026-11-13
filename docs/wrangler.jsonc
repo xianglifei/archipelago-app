@@ -1,0 +1,16 @@
+// 文档站部署配置(assets-only,无 Worker 脚本):
+// 纯静态产物,请求由 Cloudflare 静态资产层直接服务 —— 免费且不限量,不占 Worker 体积额度。
+// 域名接线在这份配置里 = 进 git:docs.qundao.app 一个 Custom Domain(wrangler deploy 自动建 DNS 与证书)。
+// 与官网(website/wrangler.jsonc)互不相干,各自独立部署;docs 站不挂进发版链。
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "archipelago-docs",
+  "compatibility_date": "2026-11-13",
+  "assets": {
+    // next build 的静态导出目录(output: 'export'),不进 git
+    "directory": "./out",
+    "not_found_handling": "404-page",
+    "html_handling": "auto-trailing-slash"
+  },
+  "routes": [{ "pattern": "docs.qundao.app", "custom_domain": true }]
+}

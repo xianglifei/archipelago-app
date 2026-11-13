@@ -14,8 +14,8 @@ import globals from 'globals'
 const TS_FILES = ['src/**/*.{ts,tsx}', 'tests/**/*.ts']
 
 export default tseslint.config(
-  // 非源码:构建产物/内部文档(不进 git)/官网/归档/wrangler 缓存
-  { ignores: ['dist/**', 'out/**', 'website/**', 'doc/**', 'design-kit/**', 'minutes/**', '.wrangler/**', 'client/**'] },
+  // 非源码:构建产物/内部文档(不进 git)/官网/文档站/归档/wrangler 缓存
+  { ignores: ['dist/**', 'out/**', 'website/**', 'docs/**', 'doc/**', 'design-kit/**', 'minutes/**', '.wrangler/**', 'client/**'] },
 
   {
     files: TS_FILES,

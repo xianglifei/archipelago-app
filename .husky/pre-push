@@ -5,6 +5,13 @@ fi
 
 changed=$(git diff --name-only "@{push}"..HEAD)
 
+# 纯文档站改动(docs/)豁免:文档站是独立工程,改一页说明不该被发版日志闸拦住。
+# 其余任何改动(含 README/CHANGELOG 之外的代码)仍走下面的双文件要求。
+if [ -n "$changed" ] && ! printf '%s\n' "$changed" | grep -qvE '^(docs/|scripts/docs-deploy\.mjs$|\.github/workflows/docs\.yml$)'; then
+  echo "ℹ 本次推送只含文档站改动(docs/),跳过 README/CHANGELOG 同步检查" >&2
+  exit 0
+fi
+
 if ! printf '%s\n' "$changed" | grep -qx 'README.md'; then
   echo "✗ 本次推送未更新 README.md —— 请先补充说明再推送" >&2
   exit 1
