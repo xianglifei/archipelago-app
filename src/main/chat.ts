@@ -798,9 +798,7 @@ export async function runToolLoop(
           messages: opts.context,
           tools: opts.tools,
           signal: opts.signal,
-          headers: opts.headers,
-          // 智谱官方建议:带工具的流式调用同时开启 tool_stream
-          extraBody: opts.tools.length > 0 && opts.provider.id === 'zhipu' ? { tool_stream: true } : undefined
+          headers: opts.headers
         },
         { onDelta, onReasoning, onActivity: opts.emit?.onActivity },
         { budget: retryBudget }

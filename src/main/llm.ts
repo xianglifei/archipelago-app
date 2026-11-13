@@ -1,13 +1,14 @@
-// OpenAI 兼容协议客户端(DeepSeek / 智谱共用),主进程内使用;支持流式与工具调用
+// OpenAI 兼容协议客户端(群岛通道 / DeepSeek 自带 Key 共用),主进程内使用;支持流式与工具调用
 import { net } from 'electron'
 import { currentSeaToken, seaRelayBaseUrl } from './auth'
 import { getProvider } from '@shared/providers'
 import { getApiKey } from './secrets'
 import { decideRetry, FIRST_BYTE_TIMEOUT_MS, type RetryBudget } from './upstream-retry'
+import { normalizeErrorCode } from './error-code'
 
 /** 后台 LLM 调用(记忆反哺/档案管家/上下文压缩/群聊)统一取凭证:
- *  群岛通道=会话令牌 + SEA 派生端点;自带 Key 通道(逃生舱)=secrets.json。
- *  0.9 迁移后 bot.providerId 恒为 archipelago,直接 getApiKey 只会拿到 undefined。 */
+ *  群岛通道=会话令牌 + SEA 派生端点;自带 Key 通道(BYOK)=secrets.json 里的 DeepSeek Key。
+ *  两边切档由设置页的切档事务把存量居民一起刷成新 provider,这里只按 bot.providerId 分流。 */
 export function llmCredentials(providerId: string): { baseUrl: string; apiKey: string | null } {
   if (providerId === 'archipelago') {
     return { baseUrl: seaRelayBaseUrl(), apiKey: currentSeaToken() }
@@ -59,8 +60,6 @@ export interface ChatRequest {
   maxTokens?: number
   temperature?: number
   signal?: AbortSignal
-  /** 厂商特有参数(如智谱 tool_stream) */
-  extraBody?: Record<string, unknown>
   /** 附加请求头(群岛通道带 x-island-uid 便于运营对账) */
   headers?: Record<string, string>
 }
@@ -141,8 +140,7 @@ function buildBody(req: ChatRequest, stream: boolean): string {
     stream,
     ...(req.tools && req.tools.length > 0 ? { tools: req.tools } : {}),
     ...(req.maxTokens !== undefined ? { max_tokens: req.maxTokens } : {}),
-    ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
-    ...(req.extraBody ?? {})
+    ...(req.temperature !== undefined ? { temperature: req.temperature } : {})
   })
 }
 
@@ -182,7 +180,9 @@ async function post(req: ChatRequest, stream: boolean): Promise<Response> {
     if (isContextTooLongText(`${code} ${message} ${text}`.slice(0, 500))) {
       throw new ContextTooLongError(message || `模型服务返回 ${res.status}:${text.slice(0, 300)}`)
     }
-    if (code) throw new RelayError(message || `模型服务返回 ${res.status}`, code, res.status)
+    // 自带 Key 的两类硬故障按 HTTP 状态归一;429 不覆盖中转站的 upstream_429(见 normalizeErrorCode)
+    const normalized = normalizeErrorCode(res.status, code)
+    if (normalized) throw new RelayError(message || `模型服务返回 ${res.status}`, normalized, res.status)
     throw new Error(`模型服务返回 ${res.status}:${text.slice(0, 300)}`)
   }
   return res

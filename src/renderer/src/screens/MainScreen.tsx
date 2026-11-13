@@ -216,6 +216,7 @@ export default function MainScreen({ initialBoot }: { initialBoot: BootState }) 
                   setProfileBotId((current) => current === activeBot.id ? null : activeBot.id)
                 }}
                 onRecharge={() => openSettings('credits')}
+                onOpenModelSource={() => openSettings('island')}
               />
             ) : activeThread && activeTaskBot ? (
               <ChatView
@@ -228,6 +229,7 @@ export default function MainScreen({ initialBoot }: { initialBoot: BootState }) 
                   setProfileBotId((current) => current === activeTaskBot.id ? null : activeTaskBot.id)
                 }}
                 onRecharge={() => openSettings('credits')}
+                onOpenModelSource={() => openSettings('island')}
               />
             ) : activeGroup ? (
               <GroupView
