@@ -39,7 +39,14 @@ function sourceLabel(t: (k: string) => string, source: string): string {
  * ③ 近 7 天消耗(柱状图:从第一个有消耗的日子起显示、最右固定今天,零消耗的前置日期不占位)
  * ④ 获取记录(最底部,只展示获得——兑换/赠送/注册赠送;消耗记录不再混入)
  */
-export default function CreditsTab(): React.ReactNode {
+export default function CreditsTab({
+  providerId,
+  onOpenModelSource
+}: {
+  /** 当前模型来源(2026-11-13 BYOK):archipelago=群岛通道(积分计费),其余=自备 Key(不花积分) */
+  providerId?: string
+  onOpenModelSource?: () => void
+}): React.ReactNode {
   const { t } = useTranslation()
   const [snap, setSnap] = useState<CreditsSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -118,8 +125,11 @@ export default function CreditsTab(): React.ReactNode {
   if (!snap) return <p className="modal-lead">{error}</p>
 
   const balance = snap.balanceMilli
-  const low = balance > 0 && balance < 200_000 // <200 积分且未用尽
-  const exhausted = balance <= 0
+  // 自带 Key 下余额与「能不能聊」无关(2026-11-13 BYOK):低余额/用尽预警一律不顶,
+  // 否则用户会以为自己的 Key 被余额卡住了。余额、兑换、获取记录照常保留——切回通道立刻要用。
+  const byok = !!providerId && providerId !== 'archipelago'
+  const low = !byok && balance > 0 && balance < 200_000 // <200 积分且未用尽
+  const exhausted = !byok && balance <= 0
   // 到期提示取「还有余额且最先到期」的批次
   const activeBatches = snap.batches.filter((b) => b.remainingMilli > 0)
   const nearest = activeBatches.length
@@ -147,20 +157,31 @@ export default function CreditsTab(): React.ReactNode {
 
   return (
     <div className="credits-tab">
-      {(low || exhausted) && (
-        <div className="credits-warnbar">
-          {exhausted ? t('credits.warnExhausted') : t('credits.warnLow')}
-          {/* 输入框常驻后「去充值」改道:聚焦兑换码输入框 */}
-          <button
-            className="link-btn"
-            onClick={() => {
-              codeRef.current?.scrollIntoView({ block: 'center' })
-              codeRef.current?.focus()
-            }}
-          >
-            {t('credits.goTopUp')}
-          </button>
+      {byok ? (
+        <div className="credits-warnbar byok">
+          {t('credits.byokNotice')}
+          {onOpenModelSource && (
+            <button className="link-btn" onClick={onOpenModelSource}>
+              {t('credits.byokSwitch')}
+            </button>
+          )}
         </div>
+      ) : (
+        (low || exhausted) && (
+          <div className="credits-warnbar">
+            {exhausted ? t('credits.warnExhausted') : t('credits.warnLow')}
+            {/* 输入框常驻后「去充值」改道:聚焦兑换码输入框 */}
+            <button
+              className="link-btn"
+              onClick={() => {
+                codeRef.current?.scrollIntoView({ block: 'center' })
+                codeRef.current?.focus()
+              }}
+            >
+              {t('credits.goTopUp')}
+            </button>
+          </div>
+        )
       )}
 
       {/* 卡片化(2026-11-09 全设置页统一):灰色标题裸背景,余额/兑换/图表/记录进卡 */}

@@ -10,7 +10,7 @@ import { currentIslandUid, currentSeaToken, seaRelayBaseUrl } from './auth'
 // - web_search 群岛通道 = 云端 DeepSeek 官方 Search API 为主(积分计费,结构化结果带摘要),
 //   任何失败自动落本机必应(免费)。文案红线:不说"降级/不可用/质量下降",统一「本次搜索不扣积分,使用本地搜索」。
 // - web_fetch = 本机 net.fetch 直抓为主(免费),失败(超时/不可达/被拒)自动云端兜底(1 积分/次)。
-// - 自带 Key 通道(逃生舱)维持原行为:DeepSeek Anthropic 原生搜索 / 智谱独立搜索 / 必应回退。
+// - 自带 Key 通道(2026-11-13 BYOK):DeepSeek Anthropic 原生搜索,失败落本机必应;不扣积分。
 // - fetch 治理(SSRF/2MB/30s/分页)沿用 M11.4 调研结论;SSRF 仅约束本机路径,云端路径由服务端负责。
 
 const SEARCH_TIMEOUT_MS = 30_000
@@ -56,10 +56,14 @@ export async function webSearch(
     }
   }
   if (provider?.id === 'deepseek' && apiKey) {
-    return searchViaDeepSeek(apiKey, modelId, query, count)
-  }
-  if (provider?.id === 'zhipu' && apiKey) {
-    return searchViaZhipu(provider.baseUrl, apiKey, query, count)
+    // BYOK 下沿用「一条搜索失败不许把错误丢给模型」的既有口径:原生搜索挂了落本机必应。
+    // 文案不提积分——自带 Key 本来就不扣积分,说「本次搜索不扣积分」反而暗示了不存在的东西。
+    try {
+      return await searchViaDeepSeek(apiKey, modelId, query, count)
+    } catch {
+      const local = await searchViaBing(query, count)
+      return { summary: local.summary, hits: local.hits, channel: '使用本地搜索' }
+    }
   }
   return searchViaBing(query, count)
 }
@@ -144,36 +148,6 @@ async function searchViaDeepSeek(
     }
   }
   return { summary: summary.trim() || null, hits: dedupeHits(hits).slice(0, count), channel: 'DeepSeek 原生搜索' }
-}
-
-/** 智谱:独立 Web Search API(search_std 引擎),同一把 API Key,直接返回结构化结果 */
-async function searchViaZhipu(
-  baseUrl: string,
-  apiKey: string,
-  query: string,
-  count: number
-): Promise<WebSearchResult> {
-  const res = await net.fetch(`${baseUrl}/web_search`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({ search_engine: 'search_std', search_query: query, count }),
-    signal: withTimeout(undefined, SEARCH_TIMEOUT_MS)
-  })
-  if (!res.ok) {
-    const text = await res.text().catch(() => '')
-    throw new Error(`智谱搜索返回 ${res.status}:${text.slice(0, 200)}`)
-  }
-  const json = (await res.json()) as {
-    search_result?: { title?: string; link?: string; content?: string }[]
-  }
-  const hits: WebSearchHit[] = (json.search_result ?? [])
-    .filter((r) => r.link)
-    .map((r) => ({
-      title: r.title || r.link!,
-      url: r.link!,
-      snippet: r.content ? decodeEntities(stripTags(r.content)).trim().slice(0, 160) : undefined
-    }))
-  return { summary: null, hits: dedupeHits(hits).slice(0, count), channel: '智谱联网搜索' }
 }
 
 /** 免 key 回退:抓必应中国结果页解析(无第三方依赖;DDG 被墙、百度 HTML 混乱,均不取) */

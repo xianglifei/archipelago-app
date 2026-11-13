@@ -35,6 +35,11 @@ export const en: typeof zh = {
     errRateLimited: 'Too many requests — please wait a moment and retry',
     errTimeout: 'The model service timed out. Please try again shortly',
     errNetwork: 'Network connection is unstable — check your network and retry',
+    errKeyInvalid: 'Your DeepSeek key is not usable (401). Check the key or switch to another channel.',
+    errKeyInsufficient: 'Your DeepSeek account is out of balance (402). Top up and retry, or switch back to the Archipelago relay.',
+    errGoFixKey: 'Update key in settings',
+    errSwitchBack: 'Switch to Archipelago relay',
+    switchedBackRelay: 'Switched back to the Archipelago relay — chats will use credits again.',
     warnLow: 'Under 200 credits — chats may stop anytime · ',
     goTopUp: 'Top up',
     placeholderExhausted: 'Out of credits — top up to keep chatting…',
@@ -528,7 +533,9 @@ export const en: typeof zh = {
     today: 'Today',
     ledgerTitle: 'Credit history',
     ledgerEmpty: 'Nothing yet',
-    ledgerExpiry: 'expires {{date}}'
+    ledgerExpiry: 'expires {{date}}',
+    byokNotice: 'Using your own key — chats and web search use no credits.',
+    byokSwitch: 'Change model source'
   },
   wizard: {
     steps: ['Welcome', 'Name it', 'You', 'Aboard'],
@@ -547,7 +554,8 @@ export const en: typeof zh = {
     doneLead: 'Tidying up and getting things ready — you can start anytime.',
     grantTitle: '🎁 {{amount}} credits granted',
     grantSub: 'Chat right away · balance & history in Settings → Credits',
-    seeYou: 'See you on the island!'
+    seeYou: 'See you on the island!',
+    byokHint: 'Prefer not to use credits? Choose “My own DeepSeek key” in Settings → Island.'
   },
   login: {
     today: 'Today',
@@ -654,7 +662,36 @@ export const en: typeof zh = {
     cardIslandTitle: 'Island info',
     cardPrefsTitle: 'Preferences',
     islandName: 'Island name',
-    ownerName: 'Your name'
+    ownerName: 'Your name',
+    // Model source (2026-11-13 BYOK): both options live on the Island page; only the key form is a sub-page
+    modelSrcTitle: 'Model source',
+    modelSrcRelayTitle: 'Archipelago relay · ready out of the box',
+    modelSrcRelaySub: 'Models are provided by Archipelago and billed in credits',
+    modelSrcByokTitle: 'My own DeepSeek key',
+    modelSrcByokUnset: 'Not configured · click this row to enter your key',
+    modelSrcByokReady: 'Configured · does not use Archipelago credits',
+    modelSrcCurrent: 'Current',
+    modelSrcEdit: 'Edit',
+    modelSrcFillIn: 'Add key',
+    modelSrcRelayConfirm: 'Switching back to the Archipelago relay restores credit-based billing for chats.',
+    modelSrcSwitchBack: 'Switch back',
+    modelSrcKeyLabel: 'API key',
+    modelSrcKeyPlaceholder: 'sk-…',
+    modelSrcKeySaved: 'Saved',
+    modelSrcKeyEmpty: 'Not set',
+    modelSrcTest: 'Test connection',
+    modelSrcTesting: 'Testing…',
+    modelSrcTestOk: '✓ Connected · {{seconds}}s',
+    modelSrcTestFail: '✗ {{error}}',
+    modelSrcKeyHint: 'No key yet? Create one at platform.deepseek.com. The key stays on this computer and is never uploaded.',
+    modelSrcModelTitle: 'Model',
+    modelSrcFlash: 'DeepSeek Flash',
+    modelSrcFlashDesc: 'Fast and cheap · default',
+    modelSrcPro: 'DeepSeek V4 Pro',
+    modelSrcProDesc: 'Flagship — stronger and pricier',
+    modelSrcByokNote: 'With your own key, chats and web search use no Archipelago credits',
+    modelSrcSave: 'Save and use',
+    modelSrcSaveHint: 'Applies to the whole island immediately'
   },
   sidebar: {
     farewellConfirm: 'Say goodbye to {{name}}?\nThey will move out; the chat history stays archived.',

@@ -250,6 +250,21 @@ export function updateBot(id: string, patch: BotPatch): Bot {
   return next
 }
 
+/** 整岛切换模型来源(2026-11-13 BYOK):全局默认 + 全部存量居民在同一事务里刷成新通道/新模型。
+ *  存量居民的 provider/model 是建行时写死的(bots.ts 的 ensureMainBot/createBot),只改
+ *  model.default 不会跟随——设置页显示已切换、聊天还走旧通道,用户会以为开关是假的。
+ *  本轮没有 per-bot 模型 UI,心智就是「整座岛换大脑」;将来做 per-bot 覆盖时再引入
+ *  follow_default 位。返回实际刷到的居民数(测试与日志用)。 */
+export function applyModelSource(providerId: string, modelId: string): number {
+  const database = getDb()
+  const run = database.transaction(() =>
+    database
+      .prepare('UPDATE bots SET provider_id = ?, model_id = ?, updated_at = ? WHERE deleted_at IS NULL')
+      .run(providerId, modelId, nowIso()).changes
+  )
+  return run()
+}
+
 /** 送别居民(M2.3):软删除,记录保留 */
 export function softDeleteBot(id: string): void {
   const bot = getBot(id)

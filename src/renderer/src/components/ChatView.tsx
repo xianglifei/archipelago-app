@@ -97,7 +97,8 @@ export default function ChatView({
   task,
   residents,
   onOpenProfile,
-  onRecharge
+  onRecharge,
+  onOpenModelSource
 }: {
   bot: Bot
   /** 任务会话模式(2026-11-06「新建任务」):历史/发送/事件按线程路由,头部与空态换任务口径;
@@ -108,6 +109,8 @@ export default function ChatView({
   onOpenProfile?: () => void
   /** 余额预警条「去充值」:跳设置 → 套餐与积分(0.9) */
   onRecharge?: () => void
+  /** 错误条「去设置换 Key」:跳设置 → 岛务 → 模型来源(2026-11-13 BYOK) */
+  onOpenModelSource?: () => void
 }) {
   const { t } = useTranslation()
   const taskId = task?.id
@@ -138,6 +141,16 @@ export default function ChatView({
   // 驱动「回信中 · Ns」运行签的秒跳与收起,回合真死(崩溃残留)则按停止口径展示
   const [replying, setReplying] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // 错误码决定动作组(2026-11-13 BYOK):自带 Key 撞 401/402/网络故障时给「换 Key / 切回群岛通道」
+  const [errorCode, setErrorCode] = useState<string | undefined>(undefined)
+  // 切回通道后的说明(非错误态,用 info 样式,跟着下一条错误一起被替换)
+  const [notice, setNotice] = useState<string | null>(null)
+  // 当前居民走哪条通道:只有群岛通道才受积分余额约束;自带 Key 下余额与「能不能发」无关
+  const byok = bot.providerId !== 'archipelago'
+  // 自带 Key 的硬故障在聊天里就能救回来(2026-11-13 BYOK):撞 401 的地方是聊天,不是设置。
+  // 三类码给同一组逃生动作;其余错误仍是「知道了」。
+  const showKeyEscape =
+    byok && (errorCode === 'key_invalid' || errorCode === 'key_insufficient' || errorCode === 'network_error')
   const [input, setInput] = useState('')
   // 随本条消息发送的附件(2026-10-29 输入框升级):回形针/粘贴/拖拽三入口,由共享 Composer 承载
   const [attachments, setAttachments] = useState<MessageAttachment[]>([])
@@ -151,6 +164,19 @@ export default function ChatView({
   const pinnedRef = useRef(true)
   // 终结事件序号(Done/Stopped/Error 各递增一次):chatHistory 快照里的 turnActive 只在「快照之后没发生终结」时才可信
   const turnSeqRef = useRef(0)
+
+  // 切回群岛通道:不弹二次确认(逃生路径不该再多一步),切完用 info 条说明恢复积分计费
+  async function switchBackToRelay(): Promise<void> {
+    try {
+      await api.settingsSave({ providerId: 'archipelago', modelId: bot.modelId })
+      setError(null)
+      setErrorCode(undefined)
+      setNotice(t('chat.switchedBackRelay'))
+      void refreshCredits()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
   // 选区引用(2026-11-02):按会话分桶,切走再切回保留;发送消费、失败回滚
   // 头部内联改名(2026-11-06,仅任务模式):Enter 保存 / Esc 取消 / 失焦保存,与侧栏行改名同款
   const [renamingTitle, setRenamingTitle] = useState<string | null>(null)
@@ -251,7 +277,9 @@ export default function ChatView({
       onChatError(({ botId, threadId, error: err, code }) => {
         if (!mine(botId, threadId)) return
         turnSeqRef.current++
-        setError(chatErrorText(t, code, err))
+        setError(chatErrorText(t, code, err, { byok }))
+        setErrorCode(code)
+        setNotice(null)
         setStreamText('')
         setStreamReasoning('')
         setStreamActive(false)
@@ -293,8 +321,9 @@ export default function ChatView({
       disposed = true
       offs.forEach((off) => off())
     }
-    // t 入依赖:语言切换后重挂事件,不足额积分等错误文案不再停留在旧语言
-  }, [bot.id, taskId, t])
+    // t 入依赖:语言切换后重挂事件,不足额积分等错误文案不再停留在旧语言;
+    // byok 入依赖:切档后重挂事件,401 的人话/逃生按钮口径跟着新通道走
+  }, [bot.id, taskId, t, byok])
 
   // 消息/流式内容变化时,吸底才跟随;直接设 scrollTop(不惊动祖先滚动容器),绘制前执行不闪跳
   useLayoutEffect(() => {
@@ -312,7 +341,9 @@ export default function ChatView({
     const text = input.trim()
     const pendingQuotes = quoteStore.record(quoteKey).quotes
     if ((!text && attachments.length === 0 && pendingQuotes.length === 0) || busy) return
-    if (balance !== null && balance <= 0) {
+    // 第四处积分门(原型只列了三处):0 积分 + 自带 Key 时这里也必须放行,否则按钮可点、
+    // 一点就被「积分已用尽」挡回去——恰好是 BYOK 最该救的人
+    if (!byok && balance !== null && balance <= 0) {
       setError(t('chat.errExhausted'))
       return
     }
@@ -322,6 +353,7 @@ export default function ChatView({
     setInput('')
     setAttachments([])
     setError(null)
+    setNotice(null)
     setBusy(true)
     setStreamText('')
     setStreamReasoning('')
@@ -587,7 +619,37 @@ export default function ChatView({
         {error && (
           <div className="chat-error">
             <span>{error}</span>
-            <button onClick={() => setError(null)}>{t('common.gotIt')}</button>
+            {showKeyEscape ? (
+              <span className="chat-error-actions">
+                {onOpenModelSource && (
+                  <button
+                    onClick={() => {
+                      setError(null)
+                      setErrorCode(undefined)
+                      onOpenModelSource()
+                    }}
+                  >
+                    {t('chat.errGoFixKey')}
+                  </button>
+                )}
+                <button onClick={() => void switchBackToRelay()}>{t('chat.errSwitchBack')}</button>
+              </span>
+            ) : (
+              <button
+                onClick={() => {
+                  setError(null)
+                  setErrorCode(undefined)
+                }}
+              >
+                {t('common.gotIt')}
+              </button>
+            )}
+          </div>
+        )}
+        {notice && (
+          <div className="chat-error info">
+            <span>{notice}</span>
+            <button onClick={() => setNotice(null)}>{t('common.gotIt')}</button>
           </div>
         )}
       </div>
@@ -597,12 +659,12 @@ export default function ChatView({
           <ApprovalPanel bot={bot} message={pendingApproval} onDecide={decideApproval} />
         ) : (
           <>
-            {balance !== null && balance <= 0 && (
+            {!byok && balance !== null && balance <= 0 && (
               <div className="composer-warnbar exhausted" onClick={onRecharge}>
                 {t('credits.warnExhausted')}<button className="link-btn">{t('chat.goTopUp')}</button>
               </div>
             )}
-            {balance !== null && balance > 0 && balance < 200_000 && (
+            {!byok && balance !== null && balance > 0 && balance < 200_000 && (
               <div className="composer-warnbar" onClick={onRecharge}>
                 {t('chat.warnLow')}<button className="link-btn">{t('chat.goTopUp')}</button>
               </div>
@@ -616,13 +678,13 @@ export default function ChatView({
               onStop={() => void (taskId ? api.taskThreadStop(taskId) : api.chatStop(bot.id))}
               onSend={() => void send()}
               placeholder={
-                balance !== null && balance <= 0
+                !byok && balance !== null && balance <= 0
                   ? t('chat.placeholderExhausted')
                   : taskId
                     ? t('chat.placeholderTask', { name: bot.name })
                     : t('chat.placeholder', { name: bot.name })
               }
-              sendDisabled={balance !== null && balance <= 0}
+              sendDisabled={!byok && balance !== null && balance <= 0}
               mentionCandidates={residents ?? [{ name: bot.name }]}
               quoteKey={quoteKey}
             />
