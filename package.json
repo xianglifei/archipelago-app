@@ -1,7 +1,7 @@
 {
   "name": "archipelago",
   "productName": "群岛",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "住在你 Mac 里的 AI Bot 团队",
   "main": "./out/main/index.js",
   "private": true,

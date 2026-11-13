@@ -137,6 +137,9 @@ export default function Wizard({ onDone }: { onDone: (boot: BootState) => void }
                 <div className="wizard-grant-sub">{t('wizard.grantSub')}</div>
               </div>
             )}
+            {/* 完成页披露 B(2026-11-13 BYOK 拍板):一行说清「还有另一条路」,不加向导步骤、
+                不改 wizard.steps(仍是四步)——0.9 刚删掉模型步骤,换个名字加回来等于白删 */}
+            <p className="wizard-byok-hint">{t('wizard.byokHint')}</p>
             <button className="btn primary big" onClick={() => onDone(result.boot)}>
               {/* 截图评审(v6):恢复 0.9 之前的收尾文案「岛上见!」——「开始聊天」显得我们是聊天机器人 */}
               {t('wizard.seeYou')} <ArrowRight size={16} />

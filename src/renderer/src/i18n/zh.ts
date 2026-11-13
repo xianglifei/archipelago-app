@@ -32,6 +32,12 @@ export const zh = {
     errRateLimited: '请求太频繁,请稍后再试',
     errTimeout: '模型服务响应超时,请稍后再试',
     errNetwork: '网络连接不稳定,请检查网络后重试',
+    // 自带 Key 的硬故障(2026-11-13 BYOK):一句人话 + 两个逃生动作
+    errKeyInvalid: '你的 DeepSeek Key 无法使用(401)。检查 Key 是否有效,或者换一条通道。',
+    errKeyInsufficient: 'DeepSeek 账户余额不足(402)。充值后重试,或者切回群岛通道。',
+    errGoFixKey: '去设置换 Key',
+    errSwitchBack: '切回群岛通道',
+    switchedBackRelay: '已切回群岛通道,聊天将恢复按积分计费。',
     warnLow: '余额不足 200 积分,聊天可能随时中断 · ',
     goTopUp: '去充值',
     placeholderExhausted: '积分已用完,充值后继续聊…',
@@ -527,7 +533,9 @@ export const zh = {
     today: '今天',
     ledgerTitle: '获取记录',
     ledgerEmpty: '暂无获取记录',
-    ledgerExpiry: '{{date}} 到期'
+    ledgerExpiry: '{{date}} 到期',
+    byokNotice: '当前使用自备 Key,聊天与联网搜索都不消耗积分。',
+    byokSwitch: '切换模型来源'
   },
   wizard: {
     steps: ['欢迎', '命名岛', '称呼', '登岛'],
@@ -546,7 +554,8 @@ export const zh = {
     doneLead: '为您打扫收拾、做好准备工作，随时可以开始。',
     grantTitle: '🎁 已赠送 {{amount}} 积分',
     grantSub: '开箱即聊 · 积分余额与明细在 设置 → 套餐与积分',
-    seeYou: '岛上见!'
+    seeYou: '岛上见!',
+    byokHint: '不想用积分?在 设置 → 岛务 里选「我自己的 DeepSeek Key」。'
   },
   login: {
     today: '今天',
@@ -653,7 +662,37 @@ export const zh = {
     cardIslandTitle: '岛的信息',
     cardPrefsTitle: '偏好',
     islandName: '岛名',
-    ownerName: '岛主称呼'
+    ownerName: '岛主称呼',
+    // 模型来源(2026-11-13 BYOK 拍板 v3):岛务页两行直接展开,只有填 Key 进二级页
+    modelSrcTitle: '模型来源',
+    modelSrcRelayTitle: '群岛通道 · 开箱即用',
+    modelSrcRelaySub: '模型由群岛统一提供,按积分计费',
+    modelSrcByokTitle: '我自己的 DeepSeek Key',
+    modelSrcByokUnset: '未配置 · 点这一行去填写 Key',
+    modelSrcByokReady: '已配置 · 不消耗群岛积分',
+    modelSrcCurrent: '当前',
+    modelSrcEdit: '修改',
+    modelSrcFillIn: '去填写',
+    modelSrcRelayConfirm: '切回群岛通道后,聊天将恢复按积分计费。',
+    modelSrcSwitchBack: '切回',
+    modelSrcKeyLabel: 'API Key',
+    modelSrcKeyPlaceholder: 'sk-…',
+    modelSrcKeySaved: '已保存',
+    modelSrcKeyPending: '待保存',
+    modelSrcKeyEmpty: '未填写',
+    modelSrcTest: '测试连通',
+    modelSrcTesting: '测试中…',
+    modelSrcTestOk: '✓ 连通 · {{seconds}}s',
+    modelSrcTestFail: '✗ {{error}}',
+    modelSrcKeyHint: '还没有 Key?去 platform.deepseek.com 创建一个。Key 只保存在这台电脑上,不上传。',
+    modelSrcModelTitle: '模型',
+    modelSrcFlash: 'DeepSeek Flash',
+    modelSrcFlashDesc: '轻快低价 · 默认',
+    modelSrcPro: 'DeepSeek V4 Pro',
+    modelSrcProDesc: '旗舰,更强也更贵',
+    modelSrcByokNote: '用自备 Key 时聊天与联网搜索不消耗群岛积分 · 网页抓取云端兜底除外',
+    modelSrcSave: '保存并使用',
+    modelSrcSaveHint: '保存后立即对整座岛生效'
   },
   sidebar: {
     farewellConfirm: '确定送别「{{name}}」吗?\nTA 会搬走,但聊天记录会归档保留。',

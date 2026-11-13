@@ -165,9 +165,12 @@ function contextTokens(key: string, bot: Bot, space: SpaceInfo | null, session: 
 }
 
 /** 模型上下文窗口(B1,2026-10-28):云端目录优先(窗口跟运营配置下发,挂载/登录时刷新缓存),
- *  未拉到或未配窗口回落本地目录(遗留兜底),再回落 128k(findModel 的保守默认) */
+ *  未拉到或未配窗口回落本地目录(遗留兜底),再回落 128k(findModel 的保守默认)。
+ *  云端目录是群岛通道的模型目录(2026-11-13 BYOK):两条通道模型 id 同名,自带 Key 的居民
+ *  不能按群岛的窗口算,只有 archipelago 才读云端值。 */
 export function contextWindowOf(bot: Bot): number {
-  return cloudModelWindow(bot.modelId) ?? findModel(bot.providerId, bot.modelId).contextWindow
+  const cloud = bot.providerId === 'archipelago' ? cloudModelWindow(bot.modelId) : null
+  return cloud ?? findModel(bot.providerId, bot.modelId).contextWindow
 }
 
 function dmTail(session: SessionRow): ChatMessage[] {
