@@ -22,8 +22,7 @@
 ```
 docs/
 ├── app/
-│   ├── (home)/page.tsx              落地页(不经 /docs,直接是根路径)
-│   ├── docs/                        fumadocs 文档布局与页面渲染
+│   ├── docs/                        fumadocs 文档布局与页面渲染(站点唯一入口)
 │   ├── api/search/route.ts          构建期生成静态搜索索引(/api/search)
 │   ├── llms.txt / llms-full.txt     给 AI 助手的摘要与全文
 │   ├── llms.mdx/docs/…/content.md   每页 markdown 原文
@@ -32,6 +31,7 @@ docs/
 ├── content/docs/                    文档内容(MDX + 每个目录一个 meta.json)
 ├── lib/                             source loader、站点常量、布局共享配置
 ├── components/                      Provider / 搜索对话框 / MDX 组件
+├── public/_redirects                根路径 301 → /docs(没有单独的落地页)
 ├── public/_headers                  Cloudflare 响应头
 ├── next.config.mjs                  静态导出配置
 └── wrangler.jsonc                   部署配置(assets-only + Custom Domain)
@@ -51,7 +51,7 @@ node scripts/docs-deploy.mjs --skip-build   # 产物已构建,只部署
 node scripts/docs-deploy.mjs --dry-run      # 只构建并检查产物,不部署(PR 预检)
 ```
 
-本地预览产物(不要双击 `out/index.html`,`file://` 下资源路径会断):
+本地预览产物(不要双击 `out/docs.html`,`file://` 下资源路径会断):
 
 ```bash
 cd docs && npx serve out
@@ -84,7 +84,7 @@ cd docs && npx wrangler dev
 npm run docs:deploy
 ```
 
-部署后脚本会探活:首页 / `/docs` / 一个深层页 / `/api/search` / `/llms.txt` / `/robots.txt` / `/sitemap.xml` 必须 200,不存在的路径必须 404,并校验线上内容包含本次产物的关键文案(防 CDN 旧缓存)。
+部署后脚本会探活:根路径必须 **301 → `/docs`**,`/docs`、一个深层页、`/api/search`、`/llms.txt`、`/robots.txt`、`/sitemap.xml` 必须 200,不存在的路径必须 404,并校验线上内容包含本次产物的关键文案(防 CDN 旧缓存)。
 
 首次绑新域名时证书签发可能需要几分钟,脚本会重试 3 次、每次间隔 20 秒。
 
@@ -96,6 +96,7 @@ npm run docs:deploy
 4. **不生成动态 OG 图。** `fumadocs-ui/og` 的 ImageResponse 默认字体没有中日韩字形,中文标题会渲染成方块;要做得额外带一份 CJK 字体。这版先不做,只保留基础 `openGraph` 元信息。
 5. **搜索默认 multilingual 分词。** 模板默认 `language: 'english'` 会把中文查询切坏;不传该选项即用 `Intl.Segmenter` 的 word 粒度分词(实测「权限与审批」→ 权限 / 与 / 审批)。索引在构建期生成、浏览器端检索,两端同一套分词。
 6. **`_headers` 里的 Cache-Control 必须按路径分开写。** 同一路径命中的多条规则会**合并同名头**;把 `max-age=300` 写进 `/*` 会得到 `max-age=31536000, immutable, max-age=300` 这种拼接值。现在只让 `/_next/static/*` 带 immutable,页面与内容各自单独声明。另外 `_headers` 只认 `#` 注释,写 `/* */` 会让整段规则被丢弃(踩过)。
+7. **根路径 301 到 `/docs`,站内只有一个入口。** 不另做落地页:输入 `docs.qundao.app` 直接落到文档首页(URL 变成 `/docs`),`public/_redirects` 里只有这一条规则。因此产物里**没有 `out/index.html`**,根路径完全靠这条重定向;部署脚本会同时校验 `out/_redirects` 与线上 301,缺了就直接失败。顶栏站点标题也直接指 `/docs`,不再绕一次 301。
 
 ## 内容规范
 
@@ -109,12 +110,11 @@ npm run docs:deploy
 
 | 项 | 大小 |
 | --- | --- |
-| 全站产物 | 4.2 MB |
-| 首页 HTML(gzip) | 6.8 KB |
-| 文档页 HTML(gzip) | 12.8 KB |
-| 全部 JS chunk(gzip) | 377 KB |
-| 搜索索引(gzip) | 159 KB(仅在打开搜索时按需加载) |
-| 文档页数 | 11(含落地页) |
+| 全站产物 | 4.0 MB |
+| 文档页 HTML(gzip) | 12.4 KB |
+| 全部 JS chunk(gzip) | 355 KB |
+| 搜索索引(gzip) | 151 KB(仅在打开搜索时按需加载) |
+| 文档页数 | 11(不含 404 页与根路径重定向) |
 
 搜索索引会随文档增长线性变大。超过 ~300KB gzip 时考虑拆分索引或按目录懒加载。
 

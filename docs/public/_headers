@@ -12,9 +12,7 @@
   X-Frame-Options: SAMEORIGIN
 
 # 页面与内容:短缓存,发新版最多 5 分钟后生效
-/
-  Cache-Control: public, max-age=300
-
+# (/ 已改由 _redirects 301 到 /docs,重定向先于响应头生效,所以这里不再给根路径写缓存头)
 /docs*
   Cache-Control: public, max-age=300
 
