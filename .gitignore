@@ -18,3 +18,7 @@ website/.site/
 
 # 项目内部记忆(文档化,任何 agent 可读;永不进入公开仓)
 /PROJECT-MEMORY.md
+
+# agent 运行时目录(任务上下文、项目指针、本机 skill 链接),只在本机存在
+/.multica/
+/.dsh/
