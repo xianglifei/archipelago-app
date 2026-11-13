@@ -414,7 +414,11 @@ export interface ModelSettings {
 export interface SettingsState {
   space: SpaceInfo
   model: ModelSettings
+  /** 当前通道的凭证是否就绪(群岛通道=登录会话令牌;自带 Key=secrets.json 里的 Key) */
   hasApiKey: boolean
+  /** 本机是否已存 DeepSeek Key(2026-11-13 BYOK):与当前通道无关——从群岛通道切回自带 Key
+   *  时,岛务页要据此决定「已配置,点行直接切」还是「未配置,点行进二级页填写」 */
+  hasByokKey: boolean
 }
 
 export interface SettingsSaveInput {

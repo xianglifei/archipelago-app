@@ -6143,6 +6143,201 @@ a {
   color: var(--accent);
 }
 
+/* ---------- 模型来源(2026-11-13 BYOK)----------
+   岛务页两行来源直接展开(大切换台),自带 Key 的细节在二级层。沿用设置页规范:
+   卡=settings-card,行=发丝线分组,标题 13px/600,副行 11.5px 灰。 */
+.model-src-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 0;
+  cursor: pointer;
+}
+
+.model-src-row + .model-src-row {
+  border-top: 1px solid var(--border);
+}
+
+.model-src-row[data-current] {
+  cursor: default;
+}
+
+/* 单选圆点:外环常显,选中填实心(与 .switch 同语言,不用原生 radio) */
+.model-src-dot {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: border-color 0.15s;
+}
+
+.model-src-dot[data-on] {
+  border-color: var(--accent);
+}
+
+.model-src-dot[data-on]::after {
+  content: '';
+  position: absolute;
+  inset: 2.5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.model-src-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.model-src-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.model-src-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.model-src-side {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.model-src-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+.model-src-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  font-size: 12px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.model-src-edit:hover {
+  text-decoration: underline;
+}
+
+/* 切回群岛通道的行内确认:不弹窗,一句说明 + 取消/切回 */
+.model-src-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0 12px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.model-src-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* 二级页:返回条 / 页标题 */
+.model-src-head {
+  margin-bottom: 10px;
+}
+
+.model-src-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--accent);
+}
+
+.model-src-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.model-src-key-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.model-src-key-state {
+  font-size: 11.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.model-src-test {
+  font-size: 12px;
+  color: var(--accent);
+}
+
+.model-src-hint {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  padding-bottom: 8px;
+}
+
+.model-src-note {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 12px 0 14px;
+}
+
+.model-src-save {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.model-src-save-hint {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+/* 自带 Key 下积分页的顶部说明(2026-11-13 BYOK):不是警告,用主色弱底 */
+.credits-warnbar.byok {
+  background: var(--accent-weak);
+  border-color: rgba(47, 107, 99, 0.24);
+  color: var(--accent);
+}
+
+/* 聊天错误条的 BYOK 动作组与「已切回通道」信息条 */
+.chat-error-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.chat-error.info {
+  background: var(--accent-weak);
+  color: var(--accent);
+}
+
+/* 完成页披露(2026-11-13 BYOK,方案 B):赠送卡下方一行灰字,不抢主按钮 */
+.wizard-byok-hint {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: -6px 0 14px;
+}
+
 /* ===== 选区引用(2026-11-02) ===== */
 
 /* 选区浮窗菜单:portal 到 body;z-index 压过 modal-overlay(50)——私信详情浮窗里的正文也能引用 */

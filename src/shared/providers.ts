@@ -1,8 +1,11 @@
 import type { ModelInfo, ProviderInfo } from './types'
 
-// 0.9 起客户端只走群岛通道(积分计费,注册即送):baseUrl 在主进程按环境覆盖(auth.seaRelayBaseUrl,
-// 本地联调 SEA_BASE_URL=http://127.0.0.1:8787),key=登录会话令牌(不落 secrets.json)。
-// 智谱/DeepSeek 自带 Key 通道保留定义作逃生舱(极端故障时热修版临时打开),UI 已全部隐藏。
+// 两条通道(2026-11-13 BYOK 拍板):
+// - 群岛通道:默认档,积分计费。baseUrl 在主进程按环境覆盖(auth.seaRelayBaseUrl,本地联调
+//   SEA_BASE_URL=http://127.0.0.1:8787),key=登录会话令牌(不落 secrets.json)。
+// - DeepSeek 自带 Key:用户把 Key 存进 secrets.json,聊天不消耗积分。智谱通道已整条删除
+//   (只覆盖 DeepSeek 一个预置,不做通用 OpenAI 兼容端点——拍板原话「通用但不精也不好」)。
+// 两条通道的模型 id 同名,切通道不用重选模型,存量居民也不会因 id 对不上被兜到 128k 默认窗口。
 export const PROVIDERS: ProviderInfo[] = [
   {
     id: 'archipelago',
@@ -12,16 +15,6 @@ export const PROVIDERS: ProviderInfo[] = [
     models: [
       { id: 'deepseek-flash', label: '快速', contextWindow: 1_000_000 },
       { id: 'deepseek-v4-pro', label: '均衡', contextWindow: 1_000_000 }
-    ]
-  },
-  {
-    id: 'zhipu',
-    label: '智谱 GLM',
-    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    keyUrl: 'https://bigmodel.cn/usercenter/apikeys',
-    models: [
-      { id: 'glm-5.3', label: 'GLM-5.3(旗舰)', contextWindow: 1_000_000 },
-      { id: 'glm-5.3-flash', label: 'GLM-5.3 Flash(轻快,约旗舰 1/10 价格)', contextWindow: 1_000_000 }
     ]
   },
   {

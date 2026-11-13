@@ -13,6 +13,9 @@ import { MCP_DDL } from './mcp-core'
 // M12:全部状态进 SQLite,原子写、崩溃可恢复(WAL)
 let db: Database.Database | null = null
 
+/** 0.9 群岛通道切换的一次性迁移闸(2026-11-13 BYOK):见 migrate() 内注释 */
+const RELAY_SWITCH_MIGRATION_FLAG = 'migration.0_9.relay_switch'
+
 export function getDb(): Database.Database {
   if (db) return db
   const dir = requireDataRoot()
@@ -286,26 +289,34 @@ function migrate(database: Database.Database): void {
   // 增量迁移:DeepSeek 模型更名(2026-10,官方已从 chat/reasoner 切换到 flash/v4-pro)
   database.prepare("UPDATE bots SET model_id = 'deepseek-flash' WHERE model_id = 'deepseek-chat'").run()
   database.prepare("UPDATE bots SET model_id = 'deepseek-v4-pro' WHERE model_id = 'deepseek-reasoner'").run()
-  // 增量迁移:0.9 群岛通道切换——全体居民迁到 archipelago 通道(自带 Key 入口已隐藏);
-  // 智谱模型映射到 快速 档(人设与记忆延续,行为差异由居民自身承载)
-  database.prepare("UPDATE bots SET provider_id = 'archipelago' WHERE provider_id IN ('zhipu','deepseek')").run()
-  database.prepare("UPDATE bots SET model_id = 'deepseek-flash' WHERE model_id IN ('glm-5.3','glm-5.3-flash')").run()
-  const modelDefault = database.prepare("SELECT value FROM meta WHERE key = 'model.default'").get() as
-    | { value: string }
-    | undefined
-  if (modelDefault) {
-    try {
-      const parsed = JSON.parse(modelDefault.value) as { providerId?: string; modelId?: string }
-      if (parsed.modelId === 'deepseek-chat') parsed.modelId = 'deepseek-flash'
-      if (parsed.modelId === 'deepseek-reasoner') parsed.modelId = 'deepseek-v4-pro'
-      if (parsed.modelId === 'glm-5.3' || parsed.modelId === 'glm-5.3-flash') parsed.modelId = 'deepseek-flash'
-      if (parsed.providerId === 'zhipu' || parsed.providerId === 'deepseek') parsed.providerId = 'archipelago'
-      database
-        .prepare("UPDATE meta SET value = ? WHERE key = 'model.default'")
-        .run(JSON.stringify(parsed))
-    } catch {
-      // 解析失败保持原值
+  // 增量迁移:0.9 群岛通道切换——全体居民迁到 archipelago 通道;智谱模型映射到 快速 档
+  // (人设与记忆延续,行为差异由居民自身承载)。
+  // 2026-11-13 BYOK 起加一次性闸:此前这段每次开机无条件执行,用户设好自带 Key 重启就被写回群岛通道,
+  // 功能等于不存在。跑过一次即落 meta 标记,之后不再跑。**新增迁移只能追加在闸外并保持幂等**,
+  // 想复用这段的清理语义请另起一条带自己闸的迁移。
+  if (!database.prepare('SELECT 1 FROM meta WHERE key = ?').get(RELAY_SWITCH_MIGRATION_FLAG)) {
+    database.prepare("UPDATE bots SET provider_id = 'archipelago' WHERE provider_id IN ('zhipu','deepseek')").run()
+    database.prepare("UPDATE bots SET model_id = 'deepseek-flash' WHERE model_id IN ('glm-5.3','glm-5.3-flash')").run()
+    const modelDefault = database.prepare("SELECT value FROM meta WHERE key = 'model.default'").get() as
+      | { value: string }
+      | undefined
+    if (modelDefault) {
+      try {
+        const parsed = JSON.parse(modelDefault.value) as { providerId?: string; modelId?: string }
+        if (parsed.modelId === 'deepseek-chat') parsed.modelId = 'deepseek-flash'
+        if (parsed.modelId === 'deepseek-reasoner') parsed.modelId = 'deepseek-v4-pro'
+        if (parsed.modelId === 'glm-5.3' || parsed.modelId === 'glm-5.3-flash') parsed.modelId = 'deepseek-flash'
+        if (parsed.providerId === 'zhipu' || parsed.providerId === 'deepseek') parsed.providerId = 'archipelago'
+        database
+          .prepare("UPDATE meta SET value = ? WHERE key = 'model.default'")
+          .run(JSON.stringify(parsed))
+      } catch {
+        // 解析失败保持原值
+      }
     }
+    database
+      .prepare('INSERT INTO meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value')
+      .run(RELAY_SWITCH_MIGRATION_FLAG, JSON.stringify('done'))
   }
 }
 

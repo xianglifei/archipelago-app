@@ -6,7 +6,7 @@ import type {
 import { EV, IPC } from '@shared/ipc-channels'
 import { getProvider } from '@shared/providers'
 import { chatOnce, withTimeout } from './llm'
-import { createBot, ensureMainBot, getBot, listBots, softDeleteBot, updateBot } from './bots'
+import { applyModelSource, createBot, ensureMainBot, getBot, listBots, softDeleteBot, updateBot } from './bots'
 import {
   beginTaskThreadClose,
   endTaskThreadClose,
@@ -86,7 +86,7 @@ import { audit } from './audit'
 import { getHiddenDms, getTurnProcessExpanded, setHiddenDms, listConversationPreviews, setTurnProcessExpanded } from './ui-state'
 import { getApiKey, setApiKey } from './secrets'
 import { getUiLanguage, setUiLanguage } from './ui-language'
-import { confirmClaim, creditsSnapshot, currentSeaToken, declineClaim, getAuthState, invalidateCreditsCache, logout as seaLogout, rebindIsland, redeemCredits, refreshAuthState, requestCode, resolveBoot, verifyLogin, wizardGrantInfo } from './auth'
+import { confirmClaim, creditsSnapshot, currentSeaToken, declineClaim, getAuthState, invalidateCreditsCache, logout as seaLogout, rebindIsland, redeemCredits, refreshAuthState, requestCode, resolveBoot, seaRelayBaseUrl, verifyLogin, wizardGrantInfo } from './auth'
 import {
   getModelConfig,
   getSpace,
@@ -660,12 +660,7 @@ export function registerIpc(): void {
     return next
   })
 
-  ipcMain.handle(IPC.SettingsGet, (): SettingsState => {
-    const space = getSpace()
-    const model = getModelConfig()
-    if (!space || !model) throw new Error('尚未完成首次配置')
-    return { space, model, hasApiKey: model.providerId === 'archipelago' ? !!currentSeaToken() : !!getApiKey(model.providerId) }
-  })
+  ipcMain.handle(IPC.SettingsGet, (): SettingsState => currentSettingsState())
 
   ipcMain.handle(IPC.SettingsSave, (_e, input: SettingsSaveInput): SettingsState => {
     if (input.islandName !== undefined || input.ownerName !== undefined) {
@@ -674,16 +669,33 @@ export function registerIpc(): void {
       void rebindIsland()
     }
     if (input.providerId && input.modelId) {
-      setModelConfig({ providerId: input.providerId, modelId: input.modelId })
+      const providerId = input.providerId
+      const modelId = input.modelId
+      const provider = getProvider(providerId)
+      if (!provider) throw new Error(`未知的模型来源:${providerId}`)
+      if (!provider.models.some((m) => m.id === modelId)) throw new Error(`未知的模型:${modelId}`)
+      const apiKey = input.apiKey?.trim()
+      if (apiKey) setApiKey(providerId, apiKey)
+      // 切到自带 Key 却一张凭证都没有:拒绝。否则整座岛的聊天会集体撞 401,
+      // 比「保存失败、留在原通道」糟得多——UI 也在没有 Key 时禁用「保存并使用」。
+      if (providerId !== 'archipelago' && !getApiKey(providerId)) {
+        throw new Error('请先填写 API Key')
+      }
+      const previous = getModelConfig()
+      // 只有通道/模型真变了才写库+刷居民:岛名/称呼的即时保存频繁走这个 handler,别白白刷库。
+      // 默认配置与居民行由 applyModelSource 在同一事务里提交(2026-11-13 codex 审查):
+      // 分开写的话第二步失败会留下「设置页已切、聊天还走旧通道」,且重试被这个 previous
+      // 判断跳过,永远修不回来。写成功后才广播。
+      if (previous?.providerId !== providerId || previous?.modelId !== modelId) {
+        applyModelSource(providerId, modelId)
+        // 打开中的聊天窗口下一轮就该走新通道(provider 随居民行下发,收到即重拉)
+        for (const win of BrowserWindow.getAllWindows()) win.webContents.send(EV.BotsChanged)
+      }
     }
-    if (input.apiKey && input.apiKey.trim()) {
-      const providerId = input.providerId ?? getModelConfig()?.providerId
-      if (providerId) setApiKey(providerId, input.apiKey.trim())
-    }
-    const space = getSpace()
-    const model = getModelConfig()
-    if (!space || !model) throw new Error('尚未完成首次配置')
-    return { space, model, hasApiKey: model.providerId === 'archipelago' ? !!currentSeaToken() : !!getApiKey(model.providerId) }
+    // 删掉「只改 Key 不切档」的历史分支(2026-11-13 codex 审查跟进):渲染端存 Key 一律带
+    // providerId(=写进对应通道的槽位),留着这条会把自备 Key 写进 archipelago 这个永远读不到的死槽。
+
+    return currentSettingsState()
   })
 
   // 群岛账号(海域服务,0.8 登录门):账号即门——登录成功才挂载数据根、才开业务库
@@ -799,15 +811,33 @@ export function registerIpc(): void {
   })
 }
 
+/** 设置页状态快照(0.9.2 抽出,2026-11-13 BYOK 加 hasByokKey):两个凭证位分开看——
+ *  hasApiKey=当前通道能不能用,hasByokKey=本机存没存 DeepSeek Key(决定岛务页那一行怎么显示)。 */
+function currentSettingsState(): SettingsState {
+  const space = getSpace()
+  const model = getModelConfig()
+  if (!space || !model) throw new Error('尚未完成首次配置')
+  return {
+    space,
+    model,
+    hasApiKey: model.providerId === 'archipelago' ? !!currentSeaToken() : !!getApiKey(model.providerId),
+    hasByokKey: !!getApiKey('deepseek')
+  }
+}
+
 async function testConnection(input: TestConnectionInput): Promise<TestResult> {
   const provider = getProvider(input.providerId)
-  if (!provider) return { ok: false, error: `未知的模型厂商:${input.providerId}` }
-  const apiKey = input.apiKey.trim()
+  if (!provider) return { ok: false, error: `未知的模型来源:${input.providerId}` }
+  // 输入框留空时测已存的那把(二级页的「测试连通」不必让用户把 Key 再贴一遍);
+  // 群岛通道测的是登录会话令牌,与真实聊天同一条链路
+  const apiKey = input.apiKey.trim() ||
+    (input.providerId === 'archipelago' ? (currentSeaToken() ?? '') : (getApiKey(input.providerId) ?? ''))
   if (!apiKey) return { ok: false, error: '请先填写 API Key' }
+  const baseUrl = input.providerId === 'archipelago' ? seaRelayBaseUrl() : provider.baseUrl
   const started = Date.now()
   try {
     await chatOnce({
-      baseUrl: provider.baseUrl,
+      baseUrl,
       apiKey,
       model: input.modelId,
       maxTokens: 8,

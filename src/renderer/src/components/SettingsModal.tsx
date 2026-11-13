@@ -8,10 +8,14 @@ import AccountTab from './AccountTab'
 import CreditsTab from './CreditsTab'
 import MemoryPanel from './MemoryPanel'
 import UpdatePanel from './UpdatePanel'
+import { ByokDetail, ModelSourceCard } from './ModelSource'
 
 // 设置(0.9 群岛通道切换):岛务 / 设备连接 / 套餐与积分 / 记忆 / 关于 五个页签
-// —— 「模型」「安全」页签已删除(模型由群岛通道统一供给;危险命令模式不再对用户暴露)
+// —— 「模型」「安全」页签已删除(危险命令模式不再对用户暴露)。
+// 2026-11-13 BYOK:模型来源回到岛务页(一张常驻卡),自带 Key 的细节在岛务页内的二级层,
+// 不新增左侧页签——「岛务做大决定,二级页做细节」。
 type SettingsTab = 'island' | 'account' | 'credits' | 'memory' | 'about'
+type IslandPane = 'main' | 'byok'
 
 export default function SettingsModal({
   onClose,
@@ -32,6 +36,8 @@ export default function SettingsModal({
 }) {
   const { t, i18n } = useTranslation()
   const [tab, setTab] = useState<SettingsTab>(initialTab)
+  // 岛务页内部层(2026-11-13 BYOK):main=岛务本页 / byok=自带 DeepSeek Key 详情页
+  const [islandPane, setIslandPane] = useState<IslandPane>('main')
   const [state, setState] = useState<SettingsState | null>(null)
   const [islandName, setIslandName] = useState('')
   const [ownerName, setOwnerName] = useState('')
@@ -165,7 +171,10 @@ export default function SettingsModal({
           </h2>
           <button
             className={`settings-nav-item ${tab === 'island' ? 'active' : ''}`}
-            onClick={() => setTab('island')}
+            onClick={() => {
+              setTab('island')
+              setIslandPane('main')
+            }}
           >
             <Palmtree size={15} /> {t('settings.tabIsland')}
           </button>
@@ -197,15 +206,35 @@ export default function SettingsModal({
 
         <div className="settings-body">
           {tab === 'account' ? (
-            <AccountTab onGoIsland={() => setTab('island')} />
+            <AccountTab
+              onGoIsland={() => {
+                setTab('island')
+                setIslandPane('main')
+              }}
+            />
           ) : tab === 'credits' ? (
-            <CreditsTab />
+            <CreditsTab
+              providerId={state?.model.providerId}
+              onOpenModelSource={() => {
+                setTab('island')
+                setIslandPane('main')
+              }}
+            />
           ) : tab === 'memory' ? (
             <MemoryPanel initialScope={initialMemoryScope} />
           ) : tab === 'about' ? (
             <UpdatePanel />
           ) : !state ? (
             <p className="modal-lead">{error ?? t('common.loading')}</p>
+          ) : islandPane === 'byok' ? (
+            <ByokDetail
+              state={state}
+              onBack={() => setIslandPane('main')}
+              onChanged={(next) => {
+                setState(next)
+                onSaved(next)
+              }}
+            />
           ) : (
             <>
               {/* 卡片化(2026-11-09 全设置页统一):归属卡撤下(账号信息归设备连接页),字段收成行内右置小输入框 */}
@@ -287,6 +316,17 @@ export default function SettingsModal({
                   </div>
                 </div>
               </div>
+
+              {/* 模型来源(2026-11-13 BYOK):两个来源直接展开在岛务页;换档立即对整座岛生效 */}
+              <label className="field-label card-section-title">{t('settings.modelSrcTitle')}</label>
+              <ModelSourceCard
+                state={state}
+                onOpenDetail={() => setIslandPane('byok')}
+                onChanged={(next) => {
+                  setState(next)
+                  onSaved(next)
+                }}
+              />
 
               {error && <div className="wizard-error">{error}</div>}
 
