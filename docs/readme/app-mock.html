@@ -1,0 +1,1100 @@
+<!doctype html>
+<!--
+  群岛 Archipelago · README 头图（手工复刻的界面示意图，不是真实截图）
+
+  按 v1.5.2 的主界面手工搭的静态 mock：84px 导航栏 / 284px 消息列表 / 聊天区 / 输入盒，
+  颜色、字号、间距、头像拼合口径均取自 src/renderer/src/styles.css 与 src/shared/avatar.ts。
+  生成 PNG 的方式见同目录 README.md；改了这里记得重新出图。
+-->
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <title>群岛 · README 头图 mock</title>
+    <style>
+      :root {
+        --bg: #ffffff;
+        --panel: #fdfdfe;
+        --sidebar: #f6f6f6;
+        --rail: #edf0ef;
+        --text: #282b31;
+        --muted: #626872;
+        --border: #dcdfe4;
+        --accent: #2f6b63;
+        --accent-weak: rgba(47, 107, 99, 0.1);
+        --soft: #eceff3;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 1440px;
+        height: 900px;
+        overflow: hidden;
+      }
+
+      body {
+        display: grid;
+        place-items: center;
+        background:
+          radial-gradient(900px 480px at 12% 0%, rgba(47, 107, 99, 0.14), transparent 62%),
+          radial-gradient(760px 460px at 92% 100%, rgba(196, 166, 116, 0.16), transparent 60%),
+          linear-gradient(160deg, #eef2f0 0%, #e9eeec 55%, #e6ebe9 100%);
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Microsoft YaHei', sans-serif;
+        font-size: 14px;
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+        user-select: none;
+      }
+
+      /* ---------- 窗口壳 ---------- */
+
+      .app-window {
+        position: relative;
+        width: 1400px;
+        height: 860px;
+        display: flex;
+        overflow: hidden;
+        border-radius: 13px;
+        border: 1px solid rgba(41, 63, 56, 0.14);
+        background: var(--bg);
+        box-shadow:
+          0 40px 90px rgba(35, 55, 49, 0.24),
+          0 6px 20px rgba(35, 55, 49, 0.1);
+      }
+
+      /* ---------- 最左 84px 导航栏 ---------- */
+
+      .nav-rail {
+        width: 84px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding-bottom: 14px;
+        background: var(--rail);
+        border-right: 1px solid var(--border);
+      }
+
+      .rail-traffic {
+        width: 100%;
+        height: 38px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding-top: 2px;
+      }
+
+      .traffic-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+      }
+
+      .traffic-dot.close {
+        background: #ff5f57;
+      }
+
+      .traffic-dot.min {
+        background: #febc2e;
+      }
+
+      .traffic-dot.zoom {
+        background: #28c840;
+      }
+
+      .rail-btn {
+        position: relative;
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      .rail-traffic + .rail-btn {
+        margin-top: 22px;
+      }
+
+      .rail-btn + .rail-btn {
+        margin-top: 6px;
+      }
+
+      .rail-btn.active {
+        background: var(--accent-weak);
+        color: var(--accent);
+      }
+
+      .rail-btn.active::before {
+        content: '';
+        position: absolute;
+        left: -21px;
+        top: 11px;
+        width: 3px;
+        height: 20px;
+        border-radius: 2px;
+        background: var(--accent);
+      }
+
+      .rail-spacer {
+        flex: 1;
+      }
+
+      .post-dot {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        min-width: 15px;
+        height: 15px;
+        padding: 0 4px;
+        border-radius: 999px;
+        background: #d9534f;
+        border: 2px solid var(--rail);
+        color: #fff;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 1;
+        display: grid;
+        place-items: center;
+      }
+
+      /* ---------- 消息列表 ---------- */
+
+      .sidebar {
+        width: 284px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        padding: 0 12px 12px;
+        background: var(--sidebar);
+        border-right: 1px solid var(--border);
+      }
+
+      .island-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 15px 8px;
+      }
+
+      .island-icon {
+        color: var(--accent);
+        flex-shrink: 0;
+      }
+
+      .island-name {
+        flex: 1;
+        min-width: 0;
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .plus-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      .bot-list {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow: hidden;
+      }
+
+      .bot-item {
+        display: flex;
+        align-items: center;
+        border-radius: 10px;
+      }
+
+      .bot-item.active {
+        background: var(--accent-weak);
+      }
+
+      .bot-main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 13px 12px;
+        text-align: left;
+      }
+
+      .bot-meta {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .bot-name {
+        display: flex;
+        align-items: center;
+        font-weight: 600;
+        font-size: 15px;
+        white-space: nowrap;
+        overflow: hidden;
+      }
+
+      .badge {
+        margin-left: 6px;
+        padding: 1px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--accent);
+        background: var(--accent-weak);
+        flex-shrink: 0;
+      }
+
+      .badge.soft {
+        color: var(--muted);
+        background: var(--soft);
+      }
+
+      .bot-preview {
+        font-size: 11px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .bot-preview.busy {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--accent);
+        font-weight: 500;
+      }
+
+      .thinking-dots {
+        display: inline-flex;
+        gap: 2.5px;
+        align-items: center;
+        margin-top: 1px;
+      }
+
+      .thinking-dots i {
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: currentColor;
+      }
+
+      .thinking-dots i:nth-child(1) {
+        opacity: 0.35;
+      }
+
+      .thinking-dots i:nth-child(2) {
+        opacity: 0.65;
+      }
+
+      .thinking-dots i:nth-child(3) {
+        opacity: 1;
+      }
+
+      /* ---------- 头像（底座 + 眼睛双层拼合） ---------- */
+
+      .avatar {
+        position: relative;
+        display: inline-flex;
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+      }
+
+      .avatar.lg {
+        width: 46px;
+        height: 46px;
+      }
+
+      .avatar.head-avatar {
+        width: 40px;
+        height: 40px;
+      }
+
+      .avatar .body,
+      .avatar .eyes {
+        position: absolute;
+        display: block;
+        pointer-events: none;
+      }
+
+      .avatar .body {
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .avatar .eyes {
+        height: auto;
+        max-width: none;
+        object-fit: contain;
+      }
+
+      .group-avatar {
+        position: relative;
+        display: inline-block;
+        width: 46px;
+        height: 46px;
+        flex-shrink: 0;
+      }
+
+      .group-avatar::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+      }
+
+      .group-stack {
+        position: relative;
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+
+      .group-stack .avatar {
+        position: absolute;
+        left: 0;
+        top: 18%;
+        width: 64%;
+        height: 64%;
+        z-index: 1;
+      }
+
+      .group-stack .avatar:nth-child(2) {
+        left: 18%;
+        z-index: 2;
+      }
+
+      .group-stack .avatar:nth-child(3) {
+        left: 36%;
+        z-index: 3;
+      }
+
+      .task-badge {
+        position: absolute;
+        right: -4px;
+        bottom: -4px;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: var(--accent);
+        border: 2px solid var(--sidebar);
+        color: #fff;
+        display: grid;
+        place-items: center;
+      }
+
+      .hidden-dms {
+        border-top: 1px solid var(--border);
+        margin-top: 6px;
+        padding-top: 4px;
+      }
+
+      .hidden-dms-head {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--muted);
+      }
+
+      .hidden-count {
+        margin-left: auto;
+        padding: 1px 7px;
+        border-radius: 99px;
+        background: rgba(0, 0, 0, 0.06);
+        font-size: 10px;
+      }
+
+      /* ---------- 聊天区 ---------- */
+
+      .chat {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+      }
+
+      .chat-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 24px;
+        border-bottom: 1px solid var(--border);
+        background: var(--panel);
+      }
+
+      .chat-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 700;
+        font-size: 15px;
+      }
+
+      .header-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .header-actions .icon-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+      }
+
+      .chat-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        padding: 24px;
+        overflow: hidden;
+      }
+
+      .day-label {
+        align-self: center;
+        font-size: 11px;
+        color: var(--muted);
+        padding: 2px 10px;
+        border-radius: 999px;
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      .msg {
+        display: flex;
+        gap: 10px;
+        max-width: 78%;
+      }
+
+      .msg.user {
+        align-self: flex-end;
+      }
+
+      .msg.assistant {
+        align-self: flex-start;
+      }
+
+      .user-col {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .bubble {
+        border-radius: 14px;
+        padding: 10px 14px;
+        line-height: 1.65;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .user-bubble {
+        background: var(--accent);
+        color: #fff;
+        border-bottom-right-radius: 4px;
+      }
+
+      .bot-bubble {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-bottom-left-radius: 4px;
+        white-space: normal;
+        min-width: 0;
+        max-width: 100%;
+        line-height: 1.7;
+      }
+
+      .md > :first-child {
+        margin-top: 0;
+      }
+
+      .md > :last-child {
+        margin-bottom: 0;
+      }
+
+      .md p {
+        margin: 0.45em 0;
+      }
+
+      .md ul {
+        margin: 0.45em 0;
+        padding-inline-start: 1.45em;
+      }
+
+      .md li {
+        margin: 0.22em 0;
+      }
+
+      .md li::marker {
+        color: var(--muted);
+      }
+
+      .md code {
+        font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+        font-size: 0.88em;
+        background: rgba(47, 107, 99, 0.08);
+        border: 1px solid rgba(47, 107, 99, 0.14);
+        padding: 0.1em 0.35em;
+        border-radius: 5px;
+      }
+
+      /* 回合过程折叠签 */
+
+      .turn-fold {
+        align-self: flex-start;
+        max-width: 88%;
+      }
+
+      .turn-fold-sign {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--muted);
+        background: rgba(0, 0, 0, 0.035);
+      }
+
+      .turn-fold-chevron {
+        opacity: 0.55;
+      }
+
+      /* 正文内嵌图（价格对比卡） */
+
+      .md-img {
+        display: block;
+        margin: 10px 0 6px;
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+
+      .chart-card {
+        width: 504px;
+        padding: 14px 18px 15px;
+        background:
+          linear-gradient(180deg, rgba(47, 107, 99, 0.045), rgba(47, 107, 99, 0) 46%),
+          #fff;
+      }
+
+      .chart-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 12px;
+        font-size: 11.5px;
+        font-weight: 600;
+      }
+
+      .chart-tag {
+        padding: 1px 7px;
+        border-radius: 999px;
+        background: var(--soft);
+        color: var(--muted);
+        font-size: 9.5px;
+        font-weight: 500;
+      }
+
+      .chart-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-top: 9px;
+      }
+
+      .chart-lbl {
+        width: 50px;
+        flex-shrink: 0;
+        font-size: 10.5px;
+        color: var(--muted);
+      }
+
+      .chart-track {
+        flex: 1;
+        height: 26px;
+        border-radius: 5px;
+        background: repeating-linear-gradient(
+          90deg,
+          rgba(47, 107, 99, 0.05) 0 1px,
+          transparent 1px 25%
+        );
+      }
+
+      .chart-bar {
+        display: block;
+        height: 100%;
+        border-radius: 5px;
+        background: linear-gradient(90deg, rgba(47, 107, 99, 0.92), rgba(47, 107, 99, 0.55));
+      }
+
+      .chart-val {
+        width: 38px;
+        flex-shrink: 0;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: var(--text);
+        text-align: right;
+      }
+
+      .chart-foot {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px dashed var(--border);
+        font-size: 9.5px;
+        color: var(--muted);
+      }
+
+      /* ---------- 输入盒 ---------- */
+
+      .composer {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        padding: 14px 24px 18px;
+        background: var(--panel);
+      }
+
+      .composer-main {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .composer-inbox {
+        position: relative;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: #fbfbfd;
+      }
+
+      .attach-strip {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 10px 0;
+      }
+
+      .attach-file {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        max-width: 240px;
+        padding: 5px 9px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: #fff;
+        font-size: 11px;
+        color: var(--text);
+      }
+
+      .attach-file .file-name {
+        max-width: 150px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .attach-x {
+        display: grid;
+        place-items: center;
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--soft);
+        color: var(--muted);
+      }
+
+      .composer-inbox .placeholder {
+        padding: 10px 46px;
+        min-height: 44px;
+        line-height: 1.6;
+        color: #9aa0a8;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .attach-btn,
+      .send-btn {
+        position: absolute;
+        bottom: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+      }
+
+      .attach-btn {
+        left: 8px;
+        color: var(--muted);
+      }
+
+      .send-btn {
+        right: 8px;
+        background: var(--accent);
+        color: #fff;
+      }
+
+      /* 让 mono 数字在截图里也稳 */
+      .chart-val,
+      .chart-lbl {
+        font-variant-numeric: tabular-nums;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-window">
+      <!-- 最左导航栏 -->
+      <nav class="nav-rail">
+        <div class="rail-traffic">
+          <span class="traffic-dot close"></span>
+          <span class="traffic-dot min"></span>
+          <span class="traffic-dot zoom"></span>
+        </div>
+
+        <div class="rail-btn active">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+          </svg>
+        </div>
+
+        <div class="rail-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="20" height="16" x="2" y="4" rx="2" />
+            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+          </svg>
+          <span class="post-dot">2</span>
+        </div>
+
+        <div class="rail-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" />
+            <path d="M5 3v4" />
+            <path d="M19 17v4" />
+            <path d="M3 5h4" />
+            <path d="M17 19h4" />
+          </svg>
+        </div>
+
+        <div class="rail-spacer"></div>
+
+        <div class="rail-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+        </div>
+      </nav>
+
+      <!-- 消息列表 -->
+      <aside class="sidebar">
+        <div class="island-head">
+          <svg class="island-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 6c.6.5 1.2 1 2.5 1C7 7 7 5 9.5 5c2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1" />
+            <path d="M2 12c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1" />
+            <path d="M2 18c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 2.6 0 2.4 2 5 2 1.3 0 1.9-.5 2.5-1" />
+          </svg>
+          <div class="island-name">灯塔岛</div>
+          <span class="plus-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14" />
+              <path d="M12 5v14" />
+            </svg>
+          </span>
+        </div>
+
+        <div class="bot-list">
+          <!-- Momo（当前会话） -->
+          <div class="bot-item active">
+            <div class="bot-main">
+              <span class="avatar lg">
+                <img class="body" src="../../src/renderer/src/assets/avatars/bodies/09_A.png" alt="" />
+                <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/L08.png" alt="" style="left: 50%; top: 45%; width: 34%; transform: translate(-50.1%, -50.13%); transform-origin: 50.1% 50.13%" />
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">Momo<span class="badge">岛务长</span></span>
+                <span class="bot-preview">收到，我按这个方向回给 TA。</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 群聊 -->
+          <div class="bot-item">
+            <div class="bot-main">
+              <span class="group-avatar">
+                <span class="group-stack">
+                  <span class="avatar">
+                    <img class="body" src="../../src/renderer/src/assets/avatars/bodies/09_A.png" alt="" />
+                    <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/L08.png" alt="" style="left: 50%; top: 45%; width: 34%; transform: translate(-50.1%, -50.13%); transform-origin: 50.1% 50.13%" />
+                  </span>
+                  <span class="avatar">
+                    <img class="body" src="../../src/renderer/src/assets/avatars/bodies/10_A.png" alt="" />
+                    <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E31.png" alt="" style="left: 50%; top: 50%; width: 43.52%; transform: translate(-50.48%, -50.37%); transform-origin: 50.48% 50.37%" />
+                  </span>
+                  <span class="avatar">
+                    <img class="body" src="../../src/renderer/src/assets/avatars/bodies/05_A.png" alt="" />
+                    <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E31.png" alt="" style="left: 50%; top: 55%; width: 43.52%; transform: translate(-50.48%, -50.37%); transform-origin: 50.48% 50.37%" />
+                  </span>
+                </span>
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">产品小队</span>
+                <span class="bot-preview">Momo：定价页我先放到产出/了</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 任务会话 -->
+          <div class="bot-item">
+            <div class="bot-main">
+              <span class="avatar lg">
+                <img class="body" src="../../src/renderer/src/assets/avatars/bodies/05_A.png" alt="" />
+                <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E31.png" alt="" style="left: 50%; top: 55%; width: 43.52%; transform: translate(-50.48%, -50.37%); transform-origin: 50.48% 50.37%" />
+                <span class="task-badge">
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="8" height="4" x="8" y="2" rx="1" />
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+                    <path d="M12 11h4" />
+                    <path d="M12 16h4" />
+                  </svg>
+                </span>
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">整理竞品资料</span>
+                <span class="bot-preview">已读完 6 篇评测，正在汇总</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 文案高手 -->
+          <div class="bot-item">
+            <div class="bot-main">
+              <span class="avatar lg">
+                <img class="body" src="../../src/renderer/src/assets/avatars/bodies/10_A.png" alt="" />
+                <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E31.png" alt="" style="left: 50%; top: 50%; width: 43.52%; transform: translate(-50.48%, -50.37%); transform-origin: 50.48% 50.37%" />
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">文案高手<span class="badge soft">文案</span></span>
+                <span class="bot-preview busy">正在想<span class="thinking-dots"><i></i><i></i><i></i></span></span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 用户增长 -->
+          <div class="bot-item">
+            <div class="bot-main">
+              <span class="avatar lg">
+                <img class="body" src="../../src/renderer/src/assets/avatars/bodies/05_A.png" alt="" />
+                <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E31.png" alt="" style="left: 50%; top: 55%; width: 43.52%; transform: translate(-50.48%, -50.37%); transform-origin: 50.48% 50.37%" />
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">用户增长<span class="badge soft">增长</span></span>
+                <span class="bot-preview">这个渠道我上周试过，成本偏高</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- 视频验收 -->
+          <div class="bot-item">
+            <div class="bot-main">
+              <span class="avatar lg">
+                <img class="body" src="../../src/renderer/src/assets/avatars/bodies/08_B.png" alt="" />
+                <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/E29.png" alt="" style="left: 50%; top: 50%; width: 51%; transform: translate(-49.28%, -51.4%); transform-origin: 49.28% 51.4%" />
+              </span>
+              <span class="bot-meta">
+                <span class="bot-name">视频验收<span class="badge soft">验收</span></span>
+                <span class="bot-preview">这版 45 秒的硬切补上了</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden-dms">
+          <div class="hidden-dms-head">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m9 18 6-6-6-6" />
+            </svg>
+            <span>已隐藏的对话</span>
+            <span class="hidden-count">2</span>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 聊天 -->
+      <main class="chat">
+        <header class="chat-header">
+          <span class="avatar head-avatar">
+            <img class="body" src="../../src/renderer/src/assets/avatars/bodies/09_A.png" alt="" />
+            <img class="eyes" src="../../src/renderer/src/assets/avatars/eyes/L08.png" alt="" style="left: 50%; top: 45%; width: 34%; transform: translate(-50.1%, -50.13%); transform-origin: 50.1% 50.13%" />
+          </span>
+          <div class="chat-title">Momo<span class="badge">岛务长</span></div>
+          <div class="header-actions">
+            <span class="icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="18" cy="5" r="3" />
+                <circle cx="6" cy="12" r="3" />
+                <circle cx="18" cy="19" r="3" />
+                <line x1="8.59" x2="15.42" y1="13.51" y2="17.49" />
+                <line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />
+              </svg>
+            </span>
+            <span class="icon-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="5" />
+                <path d="M20 21a8 8 0 0 0-16 0" />
+              </svg>
+            </span>
+          </div>
+        </header>
+
+        <div class="chat-body">
+          <div class="msg assistant">
+            <div class="msg-col">
+              <div class="bubble bot-bubble md">
+                <p>早上好。今天的待办理出来了：竞品定价、周报，邮局还有两封没回的信。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="user-col">
+              <div class="bubble user-bubble">先做竞品，其他往后放。把定价和卖点整理成一页放到产出/。</div>
+            </div>
+          </div>
+
+          <div class="turn-fold">
+            <span class="turn-fold-sign">
+              <svg class="turn-fold-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m9 18 6-6-6-6" />
+              </svg>
+              已工作 42 秒 · 6 个动作
+            </span>
+          </div>
+
+          <div class="msg assistant">
+            <div class="msg-col">
+              <div class="bubble bot-bubble md">
+                <p>整理好了，放在 <code>产出/竞品定价与卖点.md</code>。三点结论：</p>
+                <ul>
+                  <li>基础版都卡在 ¥39–59/月，价格差得不多</li>
+                  <li>年付折扣才是真正拉开差距的地方，最大差 2.4 倍</li>
+                  <li>团队版按席位加价，没有打包优惠</li>
+                </ul>
+                <div class="md-img">
+                  <div class="chart-card">
+                    <div class="chart-head"><span>月度价格对比</span><span class="chart-tag">示例数据</span></div>
+                    <div class="chart-row">
+                      <span class="chart-lbl">竞品 A</span>
+                      <span class="chart-track"><i class="chart-bar" style="width: 39%"></i></span>
+                      <span class="chart-val">¥39</span>
+                    </div>
+                    <div class="chart-row">
+                      <span class="chart-lbl">竞品 B</span>
+                      <span class="chart-track"><i class="chart-bar" style="width: 60%"></i></span>
+                      <span class="chart-val">¥59</span>
+                    </div>
+                    <div class="chart-row">
+                      <span class="chart-lbl">竞品 C</span>
+                      <span class="chart-track"><i class="chart-bar" style="width: 100%"></i></span>
+                      <span class="chart-val">¥99</span>
+                    </div>
+                    <div class="chart-foot">按基础版月付价排序 · 年付与团队版见文档</div>
+                  </div>
+                </div>
+                <p>已经同步到「产品小队」群，文案高手在拟标题。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="msg user">
+            <div class="user-col">
+              <div class="bubble user-bubble">标题别喊口号，说清楚替谁省了什么时间。</div>
+            </div>
+          </div>
+
+          <div class="msg assistant">
+            <div class="msg-col">
+              <div class="bubble bot-bubble md">
+                <p>明白，我按这个方向回给 TA。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="composer-main">
+            <div class="composer-inbox">
+              <div class="attach-strip">
+                <span class="attach-file">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                    <path d="M10 9H8" />
+                    <path d="M16 13H8" />
+                    <path d="M16 17H8" />
+                  </svg>
+                  <span class="file-name">竞品定价页截图.png</span>
+                  <span class="attach-x">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
+                    </svg>
+                  </span>
+                </span>
+              </div>
+              <div class="placeholder">交代一件事，或 @ 一位居民…</div>
+              <span class="attach-btn">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                </svg>
+              </span>
+              <span class="send-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19V5" />
+                  <path d="m5 12 7-7 7 7" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
