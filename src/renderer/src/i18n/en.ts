@@ -678,6 +678,7 @@ export const en: typeof zh = {
     modelSrcKeyLabel: 'API key',
     modelSrcKeyPlaceholder: 'sk-…',
     modelSrcKeySaved: 'Saved',
+    modelSrcKeyPending: 'Not saved yet',
     modelSrcKeyEmpty: 'Not set',
     modelSrcTest: 'Test connection',
     modelSrcTesting: 'Testing…',
@@ -689,7 +690,7 @@ export const en: typeof zh = {
     modelSrcFlashDesc: 'Fast and cheap · default',
     modelSrcPro: 'DeepSeek V4 Pro',
     modelSrcProDesc: 'Flagship — stronger and pricier',
-    modelSrcByokNote: 'With your own key, chats and web search use no Archipelago credits',
+    modelSrcByokNote: 'With your own key, chats and web search use no Archipelago credits (cloud web-fetch fallback excepted)',
     modelSrcSave: 'Save and use',
     modelSrcSaveHint: 'Applies to the whole island immediately'
   },

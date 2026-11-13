@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type { TFunction } from 'i18next'
 import { chatErrorText } from '../../src/renderer/src/chat-error'
 import { getProvider, PROVIDERS } from '../../src/shared/providers'
+import { normalizeErrorCode } from '../../src/main/error-code'
 
 const ROOT = join(__dirname, '..', '..')
 const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8')
@@ -47,6 +48,23 @@ describe('聊天错误分流(BYOK 硬故障)', () => {
   })
 })
 
+describe('HTTP 状态 → 错误码归一(error-code)', () => {
+  it('401/402 按状态归一(厂商自己的 code 不可靠)', () => {
+    expect(normalizeErrorCode(401, 'invalid_request_error')).toBe('key_invalid')
+    expect(normalizeErrorCode(402, 'invalid_request_error')).toBe('key_insufficient')
+  })
+  it('429 不覆盖中转站的 upstream_429(覆盖会让既有退避重试失效)', () => {
+    expect(normalizeErrorCode(429, 'upstream_429')).toBe('upstream_429')
+    expect(normalizeErrorCode(429, 'rate_limit_exceeded')).toBe('rate_limited')
+    expect(normalizeErrorCode(429, '')).toBe('rate_limited')
+  })
+  it('其余状态保持服务端原码(积分不足/上游 5xx/登录类文案都不许被改道)', () => {
+    expect(normalizeErrorCode(403, 'insufficient_credits')).toBe('insufficient_credits')
+    expect(normalizeErrorCode(503, 'upstream_503')).toBe('upstream_503')
+    expect(normalizeErrorCode(500, '')).toBe('')
+  })
+})
+
 describe('积分门禁与切档的源码契约(静态)', () => {
   it('四处积分判断都带 byok 守卫(漏一处 0 积分的自带 Key 用户就发不出消息)', () => {
     const src = read('src/renderer/src/components/ChatView.tsx')
@@ -55,7 +73,9 @@ describe('积分门禁与切档的源码契约(静态)', () => {
     expect(src).toContain('!byok && balance !== null && balance <= 0')
     expect(src).toContain('sendDisabled={!byok && balance !== null && balance <= 0}')
     expect(src).toContain('!byok && balance !== null && balance > 0')
-    expect(src).toMatch(/if \(!byok && balance !== null && balance <= 0\) \{\n\s+setError\(t\('chat\.errExhausted'\)\)/)
+    expect(src).toMatch(
+      /if \(!byok && balance !== null && balance <= 0\) \{\n\s+(?:setErrorCode\(undefined\)\n\s+)?setError\(t\('chat\.errExhausted'\)\)/
+    )
   })
   it('积分页自带 Key 下不顶低余额预警', () => {
     const src = read('src/renderer/src/components/CreditsTab.tsx')
@@ -70,6 +90,16 @@ describe('积分门禁与切档的源码契约(静态)', () => {
     const ipc = read('src/main/ipc.ts')
     expect(ipc).toContain('applyModelSource(providerId, modelId)')
     expect(ipc).toContain('win.webContents.send(EV.BotsChanged)')
+  })
+  it('默认配置的写入在 applyModelSource 的事务里,不许在 IPC 里先单独提交(2026-11-13 codex 审查)', () => {
+    const bots = read('src/main/bots.ts')
+    // 事务内先写 model.default 再刷居民:第二步失败时一起回滚,重试不会被 previous 判断跳过
+    expect(bots).toMatch(/database\.transaction\(\(\) => \{\n\s+setModelConfig\(\{ providerId, modelId \}\)/)
+    const ipc = read('src/main/ipc.ts')
+    expect(ipc).not.toMatch(/setModelConfig\(\{ providerId, modelId \}\)/)
+  })
+  it('行级 Enter/Space 不抢行内按钮的键盘(否则 Tab 到「修改」按 Enter 会误切档)', () => {
+    expect(read('src/renderer/src/components/ModelSource.tsx')).toContain('e.target !== e.currentTarget')
   })
   it('0.9 迁移带一次性闸(没有闸的话设好 Key 重启就回落)', () => {
     const src = read('src/main/store.ts')

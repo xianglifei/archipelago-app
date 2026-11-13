@@ -174,6 +174,7 @@ export default function ChatView({
       setNotice(t('chat.switchedBackRelay'))
       void refreshCredits()
     } catch (err) {
+      setErrorCode(undefined)
       setError(err instanceof Error ? err.message : String(err))
     }
   }
@@ -344,6 +345,7 @@ export default function ChatView({
     // 第四处积分门(原型只列了三处):0 积分 + 自带 Key 时这里也必须放行,否则按钮可点、
     // 一点就被「积分已用尽」挡回去——恰好是 BYOK 最该救的人
     if (!byok && balance !== null && balance <= 0) {
+      setErrorCode(undefined)
       setError(t('chat.errExhausted'))
       return
     }
@@ -368,6 +370,8 @@ export default function ChatView({
       // 附件直接蒸发);等待期间用户已重新输入/添加的,不覆盖只补回空缺位
       setInput((cur) => (cur.trim() === '' ? text : cur))
       setAttachments((cur) => (cur.length === 0 ? sending : cur))
+      // 本地报错没有错误码:清掉上一条的码,否则「换 Key / 切回」这组逃生按钮会挂在不相干的错上
+      setErrorCode(undefined)
       setError(err instanceof Error ? err.message : String(err))
       setBusy(false)
     }
@@ -395,6 +399,7 @@ export default function ChatView({
     } catch (err) {
       // 提交失败要给用户看见(此前只 console.error,面板按钮永久禁用像死机);
       // 不吞:面板 busy 由 finally 解除,用户可重试或换一档决策
+      setErrorCode(undefined)
       setError(err instanceof Error ? err.message : String(err))
     } finally {
       decidingRef.current = false

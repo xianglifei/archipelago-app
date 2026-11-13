@@ -102,6 +102,24 @@ describe('0.9 群岛通道迁移的一次性闸', () => {
 })
 
 describe('切档事务(applyModelSource)', () => {
+  it('居民刷新失败时默认配置一起回滚,重试能修好(2026-11-13 codex 审查)', () => {
+    const db = getDb()
+    insertBot(db, 'momo', 'archipelago', 'deepseek-flash')
+    setModelDefault(db, 'archipelago', 'deepseek-flash')
+    // 故障注入:让「刷居民」这一步必定抛错,验证两段写要么一起成、要么一起回滚
+    db.exec("CREATE TRIGGER boom BEFORE UPDATE ON bots BEGIN SELECT RAISE(ABORT, 'boom'); END")
+    expect(() => applyModelSource('deepseek', 'deepseek-v4-pro')).toThrow(/boom/)
+    // 默认配置没有单独提交:设置页不会出现「显示已切、聊天还走旧通道」的假状态
+    expect(modelDefault(db)).toEqual({ providerId: 'archipelago', modelId: 'deepseek-flash' })
+    expect(botRow(db, 'momo')).toEqual({ provider_id: 'archipelago', model_id: 'deepseek-flash' })
+
+    db.exec('DROP TRIGGER boom')
+    // 故障解除后重试必须真的生效(两段式写在这里会被 previous 判断跳过,永远修不回来)
+    expect(applyModelSource('deepseek', 'deepseek-v4-pro')).toBe(1)
+    expect(modelDefault(db)).toEqual({ providerId: 'deepseek', modelId: 'deepseek-v4-pro' })
+    expect(botRow(db, 'momo')).toEqual({ provider_id: 'deepseek', model_id: 'deepseek-v4-pro' })
+  })
+
   it('刷全部活着的居民,已送别的不动', () => {
     const db = getDb()
     insertBot(db, 'alive-1', 'archipelago', 'deepseek-flash')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import type { SettingsState } from '@shared/types'
 import { PROVIDERS } from '@shared/providers'
@@ -85,8 +85,11 @@ export function ModelSourceCard({
         data-current={onRelay || undefined}
         role="button"
         tabIndex={0}
+        aria-pressed={onRelay}
         onClick={handleRelayRow}
         onKeyDown={(e) => {
+          // 行内还有按钮:内层控件上的 Enter/Space 归内层,行级捷径不许抢(2026-11-13 codex 审查)
+          if (e.target !== e.currentTarget) return
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             handleRelayRow()
@@ -106,8 +109,11 @@ export function ModelSourceCard({
         data-current={!onRelay || undefined}
         role="button"
         tabIndex={0}
+        aria-pressed={!onRelay}
         onClick={handleByokRow}
         onKeyDown={(e) => {
+          // 行内「修改 / 去填写」按钮自己处理键盘:否则 Tab 到「修改」按 Enter 会误切档
+          if (e.target !== e.currentTarget) return
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             handleByokRow()
@@ -194,16 +200,36 @@ export function ByokDetail({
   const [testOk, setTestOk] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const keyInputId = useId()
+  // 连通测试结果绑定「测的是哪把 Key + 哪个模型」(2026-11-13 codex 审查):改任一输入即作废,
+  // 迟到的旧请求也不许再往界面写——否则会显示「连通」而实际保存的是另一组配置。
+  const testSeq = useRef(0)
 
   const keyReady = !!keyInput.trim() || state.hasByokKey
 
+  function editKey(next: string): void {
+    testSeq.current++
+    setKeyInput(next)
+    setTestOk(null)
+    setError(null)
+  }
+
+  function pickModel(next: string): void {
+    testSeq.current++
+    setModelId(next)
+    setTestOk(null)
+    setError(null)
+  }
+
   async function testConnection(): Promise<void> {
+    const seq = ++testSeq.current
     setTesting(true)
     setTestOk(null)
     setError(null)
     try {
       // 输入框留空时主进程测已存的那把,不必让用户把 Key 再贴一遍
       const r = await api.providerTest({ providerId: 'deepseek', modelId, apiKey: keyInput.trim() })
+      if (seq !== testSeq.current) return // 测的途中改了 Key/模型:结果作废,不往界面写
       if (r.ok) {
         const seconds = ((r.latencyMs ?? 0) / 1000).toFixed(1)
         setTestOk(t('settings.modelSrcTestOk', { seconds }))
@@ -211,8 +237,9 @@ export function ByokDetail({
         setError(t('settings.modelSrcTestFail', { error: r.error ?? '' }))
       }
     } catch (err) {
-      setError(errMsg(err))
+      if (seq === testSeq.current) setError(errMsg(err))
     } finally {
+      // 无条件收测试中态:测到一半改输入会让本次结果作废,但「测试中」不能永远挂着
       setTesting(false)
     }
   }
@@ -245,20 +272,28 @@ export function ByokDetail({
       </div>
       <h3 className="model-src-title">{t('settings.modelSrcByokTitle')}</h3>
 
-      <label className="field-label card-section-title">{t('settings.modelSrcKeyLabel')}</label>
+      <label className="field-label card-section-title" htmlFor={keyInputId}>
+        {t('settings.modelSrcKeyLabel')}
+      </label>
       <div className="settings-card pad">
         <div className="settings-card-row">
           <input
+            id={keyInputId}
             className="input model-src-key-input"
             type="password"
             value={keyInput}
             spellCheck={false}
             autoComplete="off"
             placeholder={t('settings.modelSrcKeyPlaceholder')}
-            onChange={(e) => setKeyInput(e.target.value)}
+            onChange={(e) => editKey(e.target.value)}
           />
           <span className="model-src-key-state">
-            {keyReady ? t('settings.modelSrcKeySaved') : t('settings.modelSrcKeyEmpty')}
+            {/* 「填了但还没保存」不许显示成「已保存」:只有输入框为空且本机确有 Key 才是持久化状态 */}
+            {keyInput.trim()
+              ? t('settings.modelSrcKeyPending')
+              : state.hasByokKey
+                ? t('settings.modelSrcKeySaved')
+                : t('settings.modelSrcKeyEmpty')}
           </span>
         </div>
         <div className="settings-card-row">
@@ -277,11 +312,12 @@ export function ByokDetail({
           className="model-src-row"
           role="button"
           tabIndex={0}
-          onClick={() => setModelId(MODEL_FLASH)}
+          aria-pressed={modelId === MODEL_FLASH}
+          onClick={() => pickModel(MODEL_FLASH)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              setModelId(MODEL_FLASH)
+              pickModel(MODEL_FLASH)
             }
           }}
         >
@@ -295,11 +331,12 @@ export function ByokDetail({
           className="model-src-row"
           role="button"
           tabIndex={0}
-          onClick={() => setModelId(MODEL_PRO)}
+          aria-pressed={modelId === MODEL_PRO}
+          onClick={() => pickModel(MODEL_PRO)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              setModelId(MODEL_PRO)
+              pickModel(MODEL_PRO)
             }
           }}
         >

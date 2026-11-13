@@ -682,18 +682,19 @@ export function registerIpc(): void {
         throw new Error('请先填写 API Key')
       }
       const previous = getModelConfig()
-      setModelConfig({ providerId, modelId })
-      // 只有通道/模型真变了才刷居民:岛名/称呼的即时保存频繁走这个 handler,别白白刷库
+      // 只有通道/模型真变了才写库+刷居民:岛名/称呼的即时保存频繁走这个 handler,别白白刷库。
+      // 默认配置与居民行由 applyModelSource 在同一事务里提交(2026-11-13 codex 审查):
+      // 分开写的话第二步失败会留下「设置页已切、聊天还走旧通道」,且重试被这个 previous
+      // 判断跳过,永远修不回来。写成功后才广播。
       if (previous?.providerId !== providerId || previous?.modelId !== modelId) {
         applyModelSource(providerId, modelId)
         // 打开中的聊天窗口下一轮就该走新通道(provider 随居民行下发,收到即重拉)
         for (const win of BrowserWindow.getAllWindows()) win.webContents.send(EV.BotsChanged)
       }
-    } else if (input.apiKey && input.apiKey.trim()) {
-      // 只改 Key 不切档(历史调用形态):写到当前通道名下
-      const providerId = getModelConfig()?.providerId
-      if (providerId) setApiKey(providerId, input.apiKey.trim())
     }
+    // 删掉「只改 Key 不切档」的历史分支(2026-11-13 codex 审查跟进):渲染端存 Key 一律带
+    // providerId(=写进对应通道的槽位),留着这条会把自备 Key 写进 archipelago 这个永远读不到的死槽。
+
     return currentSettingsState()
   })
 

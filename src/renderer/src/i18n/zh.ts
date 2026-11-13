@@ -678,6 +678,7 @@ export const zh = {
     modelSrcKeyLabel: 'API Key',
     modelSrcKeyPlaceholder: 'sk-…',
     modelSrcKeySaved: '已保存',
+    modelSrcKeyPending: '待保存',
     modelSrcKeyEmpty: '未填写',
     modelSrcTest: '测试连通',
     modelSrcTesting: '测试中…',
@@ -689,7 +690,7 @@ export const zh = {
     modelSrcFlashDesc: '轻快低价 · 默认',
     modelSrcPro: 'DeepSeek V4 Pro',
     modelSrcProDesc: '旗舰,更强也更贵',
-    modelSrcByokNote: '用自备 Key 时不消耗群岛积分 · 联网搜索照常可用',
+    modelSrcByokNote: '用自备 Key 时聊天与联网搜索不消耗群岛积分 · 网页抓取云端兜底除外',
     modelSrcSave: '保存并使用',
     modelSrcSaveHint: '保存后立即对整座岛生效'
   },

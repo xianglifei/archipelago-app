@@ -4,6 +4,7 @@ import { currentSeaToken, seaRelayBaseUrl } from './auth'
 import { getProvider } from '@shared/providers'
 import { getApiKey } from './secrets'
 import { decideRetry, FIRST_BYTE_TIMEOUT_MS, type RetryBudget } from './upstream-retry'
+import { normalizeErrorCode } from './error-code'
 
 /** 后台 LLM 调用(记忆反哺/档案管家/上下文压缩/群聊)统一取凭证:
  *  群岛通道=会话令牌 + SEA 派生端点;自带 Key 通道(BYOK)=secrets.json 里的 DeepSeek Key。
@@ -179,18 +180,8 @@ async function post(req: ChatRequest, stream: boolean): Promise<Response> {
     if (isContextTooLongText(`${code} ${message} ${text}`.slice(0, 500))) {
       throw new ContextTooLongError(message || `模型服务返回 ${res.status}:${text.slice(0, 300)}`)
     }
-    // 自带 Key 的两类硬故障按 HTTP 状态归一(2026-11-13 BYOK):厂商的 error.code 五花八门
-    // (DeepSeek 的 402 也回 invalid_request_error),只有状态码稳定。401/402 归一后渲染端
-    // 才有一个稳定分流点:各一句人话 + 「换 Key / 切回群岛通道」两个逃生按钮。
-    // 429 顺带归一为既有 rate_limited 码;其余保持服务端原码不动。
-    const normalized =
-      res.status === 401
-        ? 'key_invalid'
-        : res.status === 402
-          ? 'key_insufficient'
-          : res.status === 429
-            ? 'rate_limited'
-            : code
+    // 自带 Key 的两类硬故障按 HTTP 状态归一;429 不覆盖中转站的 upstream_429(见 normalizeErrorCode)
+    const normalized = normalizeErrorCode(res.status, code)
     if (normalized) throw new RelayError(message || `模型服务返回 ${res.status}`, normalized, res.status)
     throw new Error(`模型服务返回 ${res.status}:${text.slice(0, 300)}`)
   }
