@@ -16,7 +16,7 @@
 ```
 website/
 ├── index.html      # 官网首页(191KB;原始交接单文件 17.6MB,压缩后曾 4.3MB,拆分后图片外置)
-├── download.html   # 下载页(195KB;Mac 按钮已指向最新正式版 DMG)
+├── download.html   # 下载页(67KB;Mac 按钮已指向最新正式版 DMG;「开源与文档」卡片指向 GitHub 仓库与 docs.qundao.app)
 ├── whatsnew.html   # 新功能页(64KB;2026-11-04 上线,最近 3 版用户版更新日志;发新版后手工补一版)
 ├── assets/         # 外置图片(44 个,sha256 前 16 位命名;scripts/website-extract-assets.mjs 维护)
 ├── _headers        # 安全头 + HTML 短缓存(max-age=300) + /assets/* 一年 immutable 长缓存
@@ -77,9 +77,10 @@ node scripts/website-extract-assets.mjs   # 第三步:拆出外置图片,恢复�
    且 `npm run release` 发 stable 时自动更新+重新部署（`scripts/website-deploy.mjs`）。
    注意：不要再用归档包的 `download-config.json`+重建来配 Mac 链接——那条路会把按钮还原成
    「待配置」态，恢复方法见归档内 `本地修改记录.md`。
-2. **用户群二维码 11 月 9 日前有效**：到期前核实；替换时更新
-   `editable/assets/qr/wechat-group.jpg` 并同步 `social-qr.json`（尺寸/裁切/SHA256），
-   走重建+压缩流程，**重建后必须按归档 `本地修改记录.md` 恢复下载按钮激活态**再部署。
+2. ~~用户群二维码~~ **已下线（2026-11-13）**：下载页「用户群与联系」板块连同群二维码一并移除，
+   改为「开源与文档」卡片（客户端 GitHub 仓库 + docs.qundao.app）。注意设计归档
+   `design-kit/website-2026-11-02/editable/` 里仍是旧板块，若日后从归档重建下载页会把它带回，
+   重建前须先同步这个板块（本仓库直接维护的是 `website/download.html` 部署版）。
 3. 真机走查：Safari + 实体手机访问 https://qundao.app 全流程（含真机点下载按钮装包）。
 
 ## 红线：不暴露内部文档
