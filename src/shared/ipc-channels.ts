@@ -36,6 +36,10 @@ export const IPC = {
   BotFilesList: 'arch:bots:files',
   FilesReveal: 'arch:files:reveal',
   FilesOpen: 'arch:files:open',
+  /** 用指定应用打开文件(回合改动文件卡「打开 ▾」菜单,macOS open -a;其他平台不支持) */
+  FilesOpenWith: 'arch:files:open-with',
+  /** 「打开 ▾」菜单的应用候选名单(macOS 读 /Applications;其他平台返回空数组) */
+  FilesOpenWithApps: 'arch:files:open-with-apps',
   /** 内置 md 阅读器(2026-11-06 只读拍板):读 .md 文本(≤256KB);仅阅读器窗口可调,详见 md-reader.ts */
   FilesReadText: 'arch:files:read-text',
   /** 在独立阅读器窗口打开 .md(单例,新文件替换内容) */

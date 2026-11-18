@@ -1,4 +1,4 @@
-import type { ApprovalMeta, ChatMessage, RelationMeta } from '@shared/types'
+import type { ApprovalMeta, ChatMessage, RelayMeta, RelationMeta } from '@shared/types'
 
 // 聊天消息流 → 展示结构(回合折叠方案 C 的纯逻辑核,自 ChatView 抽出供单测):
 // 一次「用户消息 → 思考/工具/私信过程行 → 最终回复」是一个回合,出结果后过程默认整体收起;
@@ -86,6 +86,24 @@ export function buildDisplay(messages: ChatMessage[], replyingActive = false): D
 
   const groups = new Map<string, TurnGroup>()
   const allGroups: TurnGroup[] = [] // 含存量位置兜底组,后处理(置顶补思考/排序)要覆盖到它们
+  // 预扫描·唤醒转述回合(2026-11-18 改动文件卡):被回信唤醒的回合(relay anchor)没有用户行,
+  // 来信送达行是 dir='reply-in' 也不挂「回信中」签——过程行+anchor 原本按孤儿散排(工具行不折签、
+  // 改动文件卡无挂点)。为这类 anchor 预建回合组,过程行照 turnId 归组、anchor 落锚;
+  // 定时任务等其余无主回合维持孤儿散排(既有拍板,不受本改动影响)
+  for (const m of messages) {
+    if (
+      m.kind === 'chat' &&
+      m.role === 'assistant' &&
+      m.turnId &&
+      !silentTurnIds.has(m.turnId) &&
+      !groups.has(m.turnId) &&
+      (m.meta as RelayMeta | undefined)?.relay
+    ) {
+      const g: TurnGroup = { key: `turn:${m.turnId}`, turnId: m.turnId, timeline: [] }
+      groups.set(m.turnId, g)
+      allGroups.push(g)
+    }
+  }
   const exchanges = new Map<string, ChatMessage[]>()
   const display: DisplayItem[] = []
   const emittedGroups = new Set<string>()

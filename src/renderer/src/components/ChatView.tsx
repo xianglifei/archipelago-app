@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -51,7 +51,6 @@ import ResidentAvatar from './ResidentAvatar'
 import Composer, { UserAttachments, filesFromDataTransfer, useAttachmentIntake } from './Composer'
 import { Markdown, WorkspaceBaseContext } from './markdown/Markdown'
 import { Reasoning } from './markdown/Reasoning'
-import { MessageActions } from './markdown/MessageActions'
 import { QuoteSelection } from './quote/QuoteSelection'
 import { QuoteCards } from './quote/QuoteCards'
 import { chatQuoteKey, makeChatQuote, quoteStore } from './quote/quoteStore'
@@ -66,6 +65,7 @@ import {
   type TurnGroup
 } from '../utils/turn-display'
 import { loadTurnProcessPref, turnProcessPrefExpanded } from '../utils/turn-process-pref'
+import { TurnFiles } from './TurnFiles'
 import { useTranslation } from '../i18n'
 
 // 单聊(M3):流式回复,思考过程折叠;居民私信以事件行内联展示(DS Bot 式);
@@ -377,8 +377,7 @@ export default function ChatView({
     }
   }
 
-  // 最后一条正文消息(事件行/审批/思考行不算),操作条对它常显;最后一条用户消息界定进行中的回合
-  const lastBubbleId = [...messages].reverse().find((m) => !m.kind || m.kind === 'chat')?.id
+  // 最后一条用户消息界定进行中的回合(快捷复制条已删,2026-11-18:复制入口收敛到「分享」多选与气泡选中文字)
   const lastUserId = [...messages].reverse().find((m) => (!m.kind || m.kind === 'chat') && m.role === 'user')?.id
   const display = buildDisplay(messages, replying)
 
@@ -583,7 +582,6 @@ export default function ChatView({
                 running={busy && item.group.userMessage?.id === lastUserId}
                 thinking={busy && !streamText && !!streamReasoning}
                 queued={busy && !streamText && !streamReasoning && streamActive}
-                isLastChat={item.group.anchor?.id === lastBubbleId && !busy}
                 onOpenExchange={setOpenExchange}
                 selFor={selFor}
               />
@@ -595,7 +593,11 @@ export default function ChatView({
           if (item.type === 'silentTurn') {
             // 空组且非运行(回复已落地/来信从未被处理)不渲染——签是进行中的临时物,不留常驻
             return item.group.timeline.length === 0 && !item.running ? null : (
-              <SilentTurnFold key={item.group.key} group={item.group} running={item.running} />
+              <Fragment key={item.group.key}>
+                <SilentTurnFold group={item.group} running={item.running} />
+                {/* 回合改动文件卡(2026-11-18):静默回信写文件同款挂载;运行中不渲染半截清单 */}
+                {!item.running && <TurnFiles timeline={item.group.timeline} />}
+              </Fragment>
             )
           }
           const m = item.message
@@ -608,7 +610,7 @@ export default function ChatView({
               <Reasoning key={m.id} text={m.reasoning ?? ''} elapsedMs={(m.meta as ReasoningMeta | undefined)?.durationMs} />
             )
           }
-          return <Bubble key={m.id} message={m} isLast={m.id === lastBubbleId && !busy} selection={selFor(m.id)} />
+          return <Bubble key={m.id} message={m} selection={selFor(m.id)} />
         })}
         {busy && streamText && (
           <div className="msg assistant">
@@ -708,7 +710,6 @@ function TurnGroupView({
   running,
   thinking,
   queued,
-  isLastChat,
   onOpenExchange,
   selFor
 }: {
@@ -717,7 +718,6 @@ function TurnGroupView({
   thinking: boolean
   /** 已连上服务端但还没出字(排队中):签上亮「排队等待大模型」 */
   queued: boolean
-  isLastChat: boolean
   onOpenExchange: (exchangeId: string) => void
   /** 多选导出(2026-11-02):按消息 id 取勾选态,undefined=多选未开 */
   selFor: (id: number | undefined) => { selected: boolean; onToggle: () => void } | undefined
@@ -728,7 +728,9 @@ function TurnGroupView({
       {(group.timeline.length > 0 || running) && (
         <TurnFold group={group} running={running} thinking={thinking} queued={queued} onOpenExchange={onOpenExchange} />
       )}
-      {group.anchor && <Bubble message={group.anchor} isLast={isLastChat} selection={selFor(group.anchor.id)} />}
+      {group.anchor && <Bubble message={group.anchor} selection={selFor(group.anchor.id)} />}
+      {/* 回合改动文件卡(2026-11-18):正文气泡之后,卡宽=消息列宽(.turn-files 自带 width:78%);运行中不渲染半截清单 */}
+      {!running && <TurnFiles timeline={group.timeline} />}
     </>
   )
 }
@@ -926,11 +928,9 @@ function TimelineRow({
 
 function Bubble({
   message,
-  isLast = false,
   selection
 }: {
   message: ChatMessage
-  isLast?: boolean
   /** 多选导出(2026-11-02):多选模式开着时消息行首的圆形勾选框;undefined=多选未开 */
   selection?: { selected: boolean; onToggle: () => void }
 }) {
@@ -999,7 +999,8 @@ function Bubble({
         <div className="bubble bot-bubble" data-quote-source="assistant">
           <Markdown content={message.content} />
         </div>
-        {message.content && <MessageActions text={message.content} always={isLast} />}
+        {/* 快捷复制条已删(2026-11-18 拍板):复制入口收敛到「分享」多选复制与气泡选中文字;
+            回合改动文件卡下不再有游离的复制行夹在中间。群聊(GroupView)暂保留 */}
       </div>
     </div>
   )

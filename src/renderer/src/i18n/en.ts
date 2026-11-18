@@ -125,6 +125,16 @@ export const en: typeof zh = {
       updated: 'updated',
       canceled: 'canceled',
       notDone: 'not done'
+    },
+    // Turn changed-files card (2026-11-18): one file per row under the turn result, click to open
+    turnFiles: {
+      title: 'Files changed · {{count}}',
+      more: '{{count}} more',
+      collapse: 'Collapse',
+      open: 'Open',
+      openMenu: 'Open with',
+      openWithLabel: 'Choose an app',
+      reveal: 'Show in Finder'
     }
   },
   approval: {

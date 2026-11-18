@@ -57,6 +57,61 @@ export function resolveBotPath(bot: Bot, input: string, base?: string): string {
 import { isWithin, realpathSafe } from './path-fence'
 export { realpathSafe, isWithin }
 
+// ---- 行级增删统计(回合改动文件卡,2026-11-18):write_file/edit_file 落笔时顺手统计 ----
+
+/** 行数积上限:两文件都 ≤2000 行走 LCS 精确差分;更大文件退化袋交集估算,绝不拖慢写路径 */
+const DIFF_LCS_CELL_CAP = 4_000_000
+
+function splitCountedLines(text: string): string[] {
+  const lines = text.replace(/\r\n/g, '\n').split('\n')
+  // 末尾换行产生的空尾行不算一行
+  return lines.length > 0 && lines[lines.length - 1] === '' ? lines.slice(0, -1) : lines
+}
+
+/** 袋交集公共行数:同行文本按出现次数取 min 相加;大文件的粗估骨架(顺序差异不区分,可接受) */
+function bagCommonLines(a: string[], b: string[]): number {
+  const countA = new Map<string, number>()
+  for (const line of a) countA.set(line, (countA.get(line) ?? 0) + 1)
+  let common = 0
+  for (const line of b) {
+    const left = countA.get(line) ?? 0
+    if (left > 0) {
+      common += 1
+      countA.set(line, left - 1)
+    }
+  }
+  return common
+}
+
+/**
+ * 统计一次写入/编辑的增删行数:加数 = 新行数 − 公共行数,删数 = 旧行数 − 公共行数。
+ * @param before 写/编辑前的全文;null = 文件此前不存在(全部计增)
+ * @param after 写/编辑后的全文
+ * 小文件两行滚动 LCS(顺序敏感,移动行不算公共);超限退化袋交集(常见依赖巨文件只求有数)。
+ */
+export function countChangedLines(before: string | null, after: string): { add: number; del: number } {
+  const a = before === null ? [] : splitCountedLines(before)
+  const b = splitCountedLines(after)
+  if (a.length === 0 && b.length === 0) return { add: 0, del: 0 }
+  if (a.length === 0) return { add: b.length, del: 0 }
+  if (b.length === 0) return { add: 0, del: a.length }
+  if (a.length * b.length > DIFF_LCS_CELL_CAP) {
+    const common = bagCommonLines(a, b)
+    return { add: b.length - common, del: a.length - common }
+  }
+  const prev = new Uint32Array(b.length + 1)
+  const cur = new Uint32Array(b.length + 1)
+  for (let i = 1; i <= a.length; i++) {
+    const lineA = a[i - 1]! // 循环条件已守界,下标必在
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = lineA === b[j - 1]! ? (prev[j - 1] ?? 0) + 1 : Math.max(prev[j] ?? 0, cur[j - 1] ?? 0)
+    }
+    prev.set(cur)
+  }
+  const lcs = prev[b.length] ?? 0
+  return { add: b.length - lcs, del: a.length - lcs }
+}
+
 function workspaceRoot(bot: Bot): string {
   return realpathSafe(bot.workspacePath)
 }
@@ -439,7 +494,8 @@ export async function writeFileTool(
   args: Record<string, unknown>,
   signal?: AbortSignal,
   scope?: ApprovalScope,
-  base?: TaskExecBase
+  base?: TaskExecBase,
+  statsOut?: { add?: number; del?: number }
 ): Promise<string> {
   const input = String(args.path ?? '').trim()
   if (!input) return '缺少参数:path(目标路径)。'
@@ -473,10 +529,19 @@ export async function writeFileTool(
       if (fresh.mtimeMs !== prevMtimeMs || fresh.size !== prevSize) {
         return `文件在审批等待期间被别人改过(${abs}),这次写入没有执行。请重新 read_file 核对最新内容后再写。`
       }
+      // 改动统计(回合改动文件卡):覆盖前留一份旧全文,落笔后行差分
+      let beforeContent: string | null = null
+      if (statsOut) beforeContent = await fsp.readFile(abs, 'utf8')
       await fsp.writeFile(abs, content, 'utf8')
+      if (statsOut) {
+        const diff = countChangedLines(beforeContent, content)
+        statsOut.add = diff.add
+        statsOut.del = diff.del
+      }
     } else {
       // 审批期间冒出来的新文件不是这次审批覆盖的对象:排他创建,已存在即拒绝
       await fsp.writeFile(abs, content, { encoding: 'utf8', flag: 'wx' })
+      if (statsOut) statsOut.add = countChangedLines(null, content).add
     }
   } catch (err) {
     if (err instanceof Error && (err as NodeJS.ErrnoException).code === 'EEXIST') {
@@ -504,7 +569,8 @@ export async function editFileTool(
   args: Record<string, unknown>,
   signal?: AbortSignal,
   scope?: ApprovalScope,
-  base?: TaskExecBase
+  base?: TaskExecBase,
+  statsOut?: { add?: number; del?: number }
 ): Promise<string> {
   const input = String(args.path ?? '').trim()
   const oldString = typeof args.old_string === 'string' ? args.old_string : ''
@@ -561,11 +627,17 @@ export async function editFileTool(
     return `文件已不存在或无法访问:${abs},这次替换没有执行。`
   }
 
+  const beforeContent = content // 改动统计(回合改动文件卡):替换前快照
   content = replaceAll
     ? content.split(oldForMatch).join(newForWrite)
     : content.replace(oldForMatch, () => newForWrite) // 函数式替换:正文按字面写入,$&/$$ 等不再被当替换模板展开
   try {
     await fsp.writeFile(abs, content, 'utf8')
+    if (statsOut) {
+      const diff = countChangedLines(beforeContent, content)
+      statsOut.add = diff.add
+      statsOut.del = diff.del
+    }
   } catch (err) {
     return `写入失败:${err instanceof Error ? err.message : String(err)}。`
   }

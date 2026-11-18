@@ -1151,6 +1151,9 @@ export interface ToolDeps {
   /** 任务执行基点(2026-11-10 工作目录绑定):绑定线程的回合传入——文件工具相对解析与写围栏、
    *  命令默认 cwd 与 git 身份 env 全部切到 base.root;缺省=居民工作区(历史行为) */
   execBase?: TaskExecBase
+  /** 行级改动统计出口(回合改动文件卡,2026-11-18):write_file/edit_file 成功落笔时回填增删行数;
+   *  拒绝/未执行不回填,调用方据此把 meta.add/del 合进事件行 */
+  fileStatsOut?: { add?: number; del?: number }
 }
 
 export async function executeTool(
@@ -1904,8 +1907,8 @@ export async function executeTool(
   // 卡与留痕落任务会话而非漂回居民单聊;执行基点(2026-11-10)随之透传
   if (name === 'write_file' || name === 'edit_file' || name === 'run_command') {
     const scope = { turnId: deps.turnId, threadId: deps.threadId }
-    if (name === 'write_file') return writeFileTool(caller, args, deps.signal, scope, deps.execBase)
-    if (name === 'edit_file') return editFileTool(caller, args, deps.signal, scope, deps.execBase)
+    if (name === 'write_file') return writeFileTool(caller, args, deps.signal, scope, deps.execBase, deps.fileStatsOut)
+    if (name === 'edit_file') return editFileTool(caller, args, deps.signal, scope, deps.execBase, deps.fileStatsOut)
     return runCommandTool(caller, args, deps.signal, scope, deps.execBase)
   }
 

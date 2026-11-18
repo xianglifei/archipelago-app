@@ -125,6 +125,16 @@ export const zh = {
       updated: '已改',
       canceled: '已取消',
       notDone: '未成'
+    },
+    // 回合改动文件卡(2026-11-18):回合结果底部一行一个文件,点击打开
+    turnFiles: {
+      title: '改动文件 · {{count}}',
+      more: '其余 {{count}} 个',
+      collapse: '收起',
+      open: '打开',
+      openMenu: '打开方式',
+      openWithLabel: '选择应用',
+      reveal: '在 Finder 中显示'
     }
   },
   approval: {

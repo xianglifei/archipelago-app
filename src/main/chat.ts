@@ -677,7 +677,7 @@ function beginToolEvent(
   turnId?: string,
   sessionId?: string,
   execRoot?: string
-): { done: (result: string) => void; fail: () => void } | null {
+): { done: (result: string, metaPatch?: Partial<ToolEventMeta>) => void; fail: () => void } | null {
   // MCP 连接器工具(2026-11-06):转译名不带展示名,单独按 slug 反解连接器名(落「用了 瑞幸咖啡 · createOrder」)
   const labelKey = name.startsWith('mcp__') ? mcpToolEventKey(bot.id, name) : toolEventLabelKey(name, args)
   const label = labelKey ? renderToolKeyZh(labelKey) : null
@@ -698,9 +698,9 @@ function beginToolEvent(
     return null
   }
   return {
-    done: (result) => {
+    done: (result, metaPatch) => {
       const oKey = toolEventOutcomeKey(name, args, result, Date.now() - started)
-      finishToolEvent(messageId, 'done', renderToolKeyZh(oKey), oKey)
+      finishToolEvent(messageId, 'done', renderToolKeyZh(oKey), oKey, metaPatch)
     },
     fail: () => finishToolEvent(messageId, 'failed', '失败', { k: 'chat.out.failed' })
   }
@@ -879,6 +879,8 @@ export async function runToolLoop(
         if (event) processRows++
         let outcome: string
         try {
+          // 行级改动统计(回合改动文件卡):每次调用一个新鲜出口,工具成功落笔才回填
+          const fileStats: { add?: number; del?: number } = {}
           outcome = await executeTool(bot, call.name, safeParseJson(call.arguments), {
             depth: opts.depth,
             signal: opts.signal,
@@ -888,9 +890,15 @@ export async function runToolLoop(
             chat: opts.chat,
             threadId: opts.threadId,
             sessionId: opts.sessionId,
-            execBase: opts.execBase
+            execBase: opts.execBase,
+            fileStatsOut: fileStats
           })
-          event?.done(outcome)
+          event?.done(
+            outcome,
+            fileStats.add !== undefined || fileStats.del !== undefined
+              ? { add: fileStats.add, del: fileStats.del }
+              : undefined
+          )
         } catch (err) {
           outcome = `工具 ${call.name} 执行失败:${err instanceof Error ? err.message : String(err)}`
           event?.fail()

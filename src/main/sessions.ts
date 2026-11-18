@@ -232,12 +232,13 @@ export function insertMessage(
   return messageFromRow(row)
 }
 
-/** 工具事件行收尾:执行中 → 完成/失败,补上收尾摘要;界面同步刷新(双语:outcomeK 随摘要落库) */
+/** 工具事件行收尾:执行中 → 完成/失败,补上收尾摘要与可选 meta 补丁(行级增删统计);界面同步刷新(双语:outcomeK 随摘要落库) */
 export function finishToolEvent(
   messageId: number,
   status: 'done' | 'failed',
   outcome?: string,
-  outcomeK?: { k: string; p?: Record<string, string | number> }
+  outcomeK?: { k: string; p?: Record<string, string | number> },
+  metaPatch?: Partial<ToolEventMeta>
 ): void {
   try {
     const db = getDb()
@@ -249,6 +250,7 @@ export function finishToolEvent(
     meta.status = status
     if (outcome) meta.outcome = outcome
     if (outcomeK) meta.outcomeK = outcomeK
+    if (metaPatch) Object.assign(meta, metaPatch)
     db.prepare('UPDATE messages SET meta = ? WHERE id = ?').run(JSON.stringify(meta), messageId)
     syncSession(row.session_id)
   } catch (err) {

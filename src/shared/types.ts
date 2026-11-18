@@ -129,6 +129,10 @@ export interface ToolEventMeta {
   outcomeK?: { k: string; p?: Record<string, string | number> }
   /** 写入/编辑的目标绝对路径(按居民工作区解析);界面文件名可点,用系统默认程序打开 */
   path?: string
+  /** 本次写入/编辑的增行数(回合改动文件卡统计槽;写前不存在=整文件计增)。缺省=旧数据/未统计 */
+  add?: number
+  /** 本次写入/编辑的删行数(同上) */
+  del?: number
 }
 
 /** 附件 intake 项:粘贴/拖拽进来的东西要么是「有真实路径的文件」(Finder 复制/拖入),要么是「无路径的图片字节」(截图、网页复制图片) */
@@ -991,6 +995,10 @@ export interface RendererApi {
   revealInFolder(path: string): Promise<void>
   /** 用系统默认应用打开该文件;返回错误文案,空串 = 成功 */
   openPath(path: string): Promise<string>
+  /** 用指定应用打开该文件(macOS open -a);返回错误文案,空串 = 成功。仅 macOS 支持指定应用 */
+  openWithApp(path: string, app: string): Promise<string>
+  /** 可选用的应用名单(macOS 读 /Applications,应用名去 .app 后缀排序;其他平台返回空数组) */
+  openWithApps(): Promise<string[]>
   /** 内置 md 阅读器(2026-11-06 只读):读 .md 文本(≤256KB,非 md/超限/二进制诚实报错) */
   filesReadText(path: string): Promise<MdTextReadResult>
   /** 在独立阅读器窗口打开 .md(单例窗口,新文件替换内容) */

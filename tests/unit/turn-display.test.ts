@@ -293,3 +293,63 @@ describe('兜底组用户消息可见性(旧消息无 turnId)', () => {
     expect(g.group.userMessage?.content).toBe('你好')
   })
 })
+
+// 唤醒转述回合成组(2026-11-18 改动文件卡):被回信唤醒的回合没有用户行、来信送达行是
+// dir='reply-in' 不挂「回信中」签,过程行+anchor 原本按孤儿散排;预建回合组后工具行折签、
+// 改动文件卡才有挂点(渲染端 collectTurnFiles 吃 group.timeline)
+describe('唤醒转述回合(relay anchor)预建组', () => {
+  const turnId = 'T-relay'
+  const exId = 'ex-relay'
+
+  it('reply-in 送达行不挂签也不吞行;note/tool 归组、relay anchor 落锚', () => {
+    const rows: ChatMessage[] = [
+      msg({
+        role: 'assistant',
+        kind: 'relation',
+        exchangeId: exId,
+        meta: { dir: 'reply-in', peer: 'Coco' },
+        content: '[来自 Coco 的回复] 数据齐了'
+      }),
+      msg({ role: 'assistant', kind: 'note', turnId, reasoning: '整理数据' }),
+      msg({
+        role: 'assistant',
+        kind: 'tool',
+        turnId,
+        meta: { toolName: 'write_file', status: 'done', path: '/ws/天气.md', add: 95 }
+      }),
+      msg({
+        role: 'assistant',
+        kind: 'chat',
+        turnId,
+        meta: { relay: { peer: 'Coco', exchangeId: exId } },
+        content: '文档建好了'
+      })
+    ]
+    const items = buildDisplay(rows, false)
+    const turns = items.filter((d): d is Extract<DisplayItem, { type: 'turn' }> => d.type === 'turn')
+    // 唯一的回合组:relay anchor 预建,note/tool 归入时间线,anchor 落锚
+    expect(turns).toHaveLength(1)
+    const g = turns[0]!.group
+    expect(g.turnId).toBe(turnId)
+    expect(g.userMessage).toBeUndefined()
+    expect(g.timeline.map((t) => t.kind)).toEqual(['note', 'tool'])
+    expect(g.anchor?.content).toBe('文档建好了')
+    // 没有任何孤儿散排行(message 项);信件送达行照旧独立 exchange 展示
+    expect(items.some((d) => d.type === 'message')).toBe(false)
+    expect(items.some((d) => d.type === 'exchange')).toBe(true)
+  })
+
+  it('用户回合已占用的 turnId 不被 relay 预建覆盖;无 relay meta 的孤儿 anchor 维持散排', () => {
+    const rows: ChatMessage[] = [
+      msg({ role: 'user', kind: 'chat', turnId: 'U1', content: '建个文档' }),
+      msg({ role: 'assistant', kind: 'chat', turnId: 'U1', content: '好了' }),
+      // 无 relay meta 的孤儿 anchor(旧数据):维持散排,不建组
+      msg({ role: 'assistant', kind: 'chat', turnId: 'T-old', content: '旧孤儿正文' })
+    ]
+    const items = buildDisplay(rows, false)
+    const turns = items.filter((d): d is Extract<DisplayItem, { type: 'turn' }> => d.type === 'turn')
+    expect(turns).toHaveLength(1)
+    expect(turns[0]!.group.turnId).toBe('U1')
+    expect(items.some((d) => d.type === 'message')).toBe(true)
+  })
+})
