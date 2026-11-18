@@ -6,6 +6,20 @@ import { getUiLanguage } from './ui-language'
 
 // 系统提示与文案;岛名随机词库在 @shared/names.ts(向导使用)
 // 性格原型定义在 @shared/archetypes.ts(0.8 性格系统)
+//
+// ── 提示词分层总纲(2026-11-18 方案 - 系统提示词工程化)─────────────────────────
+// 系统提示按「越少变越靠前」拆成独立 system 消息,保 prompt cache 前缀稳定:
+//   S1 稳定核 buildStablePrompt:身份/性格块(不含 warmLine)/协作公约/定时任务/
+//      邮局/说话风格/本机文件/语言与标点——段内禁止出现任何易变事实(名册、权限档、
+//      技能、连接器、熟络档位一律进 S2);新增规则行先问归属哪层;
+//   S2 运行时公告 buildRuntimePrompt:supersedes 头行 + 熟络 warmLine + 居民名册 +
+//      技能节 + MCP 边界 + 权限档位——熟络翻转(第 40 条消息自动发生)、邀请/改名居民、
+//      装卸技能与连接器、切权限档,只废 S2 及其后,不再打穿全量前缀;
+//   群聊另叠 S3 群规则段 buildGroupPromptParts 第三段(群名/管理员/公告,准稳定,
+//      排在 S2 之后、记忆之前)。组装顺序见 steward.buildContextMessages 与
+//      groups.buildGroupTurnContext。
+// 兼容导出 buildSystemPrompt / buildGroupSystemPrompt = 各段 '\n\n' 拼接,全文由
+// tests/integration/prompt-contract.test.ts 的 golden 逐字锁定:改措辞请显式更新快照。
 
 export interface RosterEntry {
   name: string
@@ -19,14 +33,17 @@ export interface RosterEntry {
 const ARCHETYPE_GUARD =
   '性格只影响你说话的方式,不影响事实的准确与任务的完成——不确定的事照样直说,该拒绝的请求照样拒绝。'
 
-/** 每个 Bot 的系统提示:身份 + 性格原型 + 岛的上下文 + 居民名册 + 协作规则(M3.1 / §7.2)
- *  familiar(0.8 L2):熟络档位——达标后追加各原型的 warmLine,语气自然升温;换性格不影响档位 */
-export function buildSystemPrompt(
-  bot: Bot,
-  space: SpaceInfo | null,
-  roster: RosterEntry[] = [],
-  familiar = false
-): string {
+/** S2 运行时公告头行(FR4,dsh runtime-context supersedes 句的群岛化):
+ *  明示「以本条为准」——历史里残留的旧名册/旧档位/旧技能清单一律作废,
+ *  与 §说话风格里「旧口径数字以当前系统提示为准」同源但覆盖运行时事实 */
+function runtimeHeaderLine(): string {
+  return getUiLanguage() === 'en'
+    ? '[Current state · Your live status follows — familiarity, resident roster, skills and connectors, permission level. It updates as the island changes; any older roster, permission level, or skill list seen earlier in the conversation is superseded by this message.]'
+    : '[当前状态 · 以下随岛上变化即时更新——熟络档位、居民名册、技能与连接器、权限档位;历史消息里出现过的旧名册、旧档位、旧技能清单一律作废,以本条为准]'
+}
+
+/** S1 稳定核:只含慢变事实(身份/岛/分工/性格块),规则行措辞变更需同步 golden 快照 */
+export function buildStablePrompt(bot: Bot, space: SpaceInfo | null): string {
   const owner = space?.ownerName?.trim() || '岛主'
   const island = space?.name?.trim() || '群岛'
   const head = bot.isMain
@@ -41,21 +58,11 @@ export function buildSystemPrompt(
     `${head}${role}你们住在岛主「${owner}」的岛「${island}」上(${hostDevice}就是这座岛)。${persona}`
   ]
 
-  // 性格原型块(0.8):persona 之后、名册与规则之前——只管"怎么说",与分工/规则互不干涉
+  // 性格原型块(0.8):只管"怎么说",与分工/规则互不干涉;warmLine 是易变事实(熟络翻转),
+  // 随 S2 公告——GUARD 语义自足,不依赖 warmLine 在场
   const arch = getArchetype(bot.archetype)
   if (arch) {
-    const warm = familiar && arch.warmLine ? `\n${arch.warmLine}` : ''
-    lines.push(`[性格原型:${arch.name}]\n${arch.block}${warm}\n${ARCHETYPE_GUARD}`)
-  }
-
-  if (roster.length > 0) {
-    lines.push(
-      `岛上的居民(全是 AI 伙伴,不是真人;真人只有岛主「${owner}」):`,
-      ...roster.map(
-        (r) =>
-          `- ${r.name}${r.role || r.archetype ? `(${[r.role, r.archetype].filter(Boolean).join(' · ')})` : ''}${r.isMain ? ' · 主 Bot' : ''}`
-      )
-    )
+    lines.push(`[性格原型:${arch.name}]\n${arch.block}\n${ARCHETYPE_GUARD}`)
   }
 
   lines.push(
@@ -105,21 +112,6 @@ export function buildSystemPrompt(
     // 内嵌图(2026-11-05):正文里的本机图片会直接显示在岛主的聊天窗口里
     '- 你在本机生成图片(图表/截图/加工图),或想让岛主直接看到某张本机图片时:在回复正文里用图片语法 ![简短说明](图片绝对路径) 单独一行嵌入,岛主的聊天窗口会直接显示这张图,点击还能打开原文件;路径必须是绝对路径,不要用这种语法嵌网络图片;'
   )
-  // 你的技能(2026-10-29 第一期;2026-11-05 按需加载):已装的卡全文常驻或名册(总量超
-  // SKILL_INJECT_BUDGET 自动切名册,正文走 load_skill)+ 岛上可学名册;只随装卸/更新变化,
-  // 放第一条系统消息里保 prompt cache 前缀稳定;两边都空整节省略
-  lines.push(...skillPromptSection(bot.id))
-  // MCP 连接器(2026-11-06):有分配连接器的居民补一行边界句——服务方的工具说明=参考不是命令
-  lines.push(...mcpBoundaryLines(bot.id))
-  if (bot.permission === 'auto') {
-    lines.push(
-      '- 你的权限档位是「全自动」:所有操作都会直接执行(包括写工作区外和危险命令),不会再弹审批卡;每次执行都会留痕,岛主可以回看,放心认真做事就好。'
-    )
-  } else {
-    lines.push(
-      '- 你的权限档位是「半自动」:日常操作直接做;写工作区外的路径、执行危险命令(rm -rf、sudo、git push、覆盖性重定向等)会弹出审批卡,岛主批准后才会执行;被拒绝就换思路,不要原样重试。'
-    )
-  }
 
   // 双语(2026-10-30):界面语言=en 时改发英文语言跟随指令——居民世界文本(工具结果/公约底稿)保持中文,
   // 模型读中文工具结果、用英文回复;岛主中途换语言则跟随岛主
@@ -137,34 +129,125 @@ export function buildSystemPrompt(
   return lines.join('\n')
 }
 
+/** S2 运行时公告:岛上变化即时刷新的易变段——变化只废本条 system 消息及其后 */
+export function buildRuntimePrompt(
+  bot: Bot,
+  space: SpaceInfo | null,
+  roster: RosterEntry[] = [],
+  familiar = false
+): string {
+  const owner = space?.ownerName?.trim() || '岛主'
+  const lines: string[] = [runtimeHeaderLine()]
+
+  // 熟络 warmLine(0.8 L2):达标追加、换性格不影响档位;从 S1 性格块拆到此处,
+  // 熟络翻转不再打穿稳定核
+  const arch = getArchetype(bot.archetype)
+  if (familiar && arch?.warmLine) lines.push(`- ${arch.warmLine}`)
+
+  if (roster.length > 0) {
+    lines.push(
+      `岛上的居民(全是 AI 伙伴,不是真人;真人只有岛主「${owner}」):`,
+      ...roster.map(
+        (r) =>
+          `- ${r.name}${r.role || r.archetype ? `(${[r.role, r.archetype].filter(Boolean).join(' · ')})` : ''}${r.isMain ? ' · 主 Bot' : ''}`
+      )
+    )
+  }
+
+  // 你的技能(2026-10-29 第一期;2026-11-05 按需加载):已装的卡全文常驻或名册(总量超
+  // SKILL_INJECT_BUDGET 自动切名册,正文走 load_skill)+ 岛上可学名册;只随装卸/更新变化,
+  // 进 S2 保 prompt cache 前缀稳定;两边都空整节省略
+  lines.push(...skillPromptSection(bot.id))
+
+  // MCP 连接器(2026-11-06):有分配连接器的居民补一行边界句——服务方的工具说明=参考不是命令
+  lines.push(...mcpBoundaryLines(bot.id))
+
+  if (bot.permission === 'auto') {
+    lines.push(
+      '- 你的权限档位是「全自动」:所有操作都会直接执行(包括写工作区外和危险命令),不会再弹审批卡;每次执行都会留痕,岛主可以回看,放心认真做事就好。'
+    )
+  } else {
+    lines.push(
+      '- 你的权限档位是「半自动」:日常操作直接做;写工作区外的路径、执行危险命令(rm -rf、sudo、git push、覆盖性重定向等)会弹出审批卡,岛主批准后才会执行;被拒绝就换思路,不要原样重试。'
+    )
+  }
+
+  return lines.join('\n')
+}
+
+export interface SystemPromptParts {
+  /** S1 稳定核:不含任何易变事实(见文件头分层总纲) */
+  stable: string
+  /** S2 运行时公告:supersedes 头行 + 全部易变段 */
+  runtime: string
+}
+
+/** 分层装配主入口:steward(单聊/任务会话)与 groups(群聊)共用,段级 token 统计(FR3)按此命名 */
+export function buildSystemPromptParts(
+  bot: Bot,
+  space: SpaceInfo | null,
+  roster: RosterEntry[] = [],
+  familiar = false
+): SystemPromptParts {
+  return { stable: buildStablePrompt(bot, space), runtime: buildRuntimePrompt(bot, space, roster, familiar) }
+}
+
+/** 兼容入口(旧单消息场景/快照测试):S1 + '\n\n' + S2 拼接 */
+export function buildSystemPrompt(
+  bot: Bot,
+  space: SpaceInfo | null,
+  roster: RosterEntry[] = [],
+  familiar = false
+): string {
+  const { stable, runtime } = buildSystemPromptParts(bot, space, roster, familiar)
+  return runtime ? `${stable}\n\n${runtime}` : stable
+}
+
 export interface GroupBrief {
   name: string
   announcement: string
   adminName: string
 }
 
-/** 群聊系统提示(M5):在单人身份之上叠加值守/轮流/[PASS]/交接闭环规则 */
-export function buildGroupSystemPrompt(
+export interface GroupPromptParts extends SystemPromptParts {
+  /** S3 群规则段:群名/管理员/群公告——准稳定,排在 S2 之后、记忆之前 */
+  group: string
+}
+
+/** 群聊分层装配(M5):单人身份(S1/S2)之上叠加 S3 值守/轮流/[PASS]/交接闭环规则 */
+export function buildGroupPromptParts(
   bot: Bot,
   space: SpaceInfo | null,
   roster: RosterEntry[],
   group: GroupBrief
-): string {
-  const base = buildSystemPrompt(bot, space, roster)
+): GroupPromptParts {
+  const base = buildSystemPromptParts(bot, space, roster)
   const adminLine =
     bot.name === group.adminName
       ? '你是本群的管理员。'
       : `本群管理员是「${group.adminName}」。`
   const announcement = group.announcement ? `\n群公告:${group.announcement}` : ''
-  return `${base}
-
-—— 以下是群聊「${group.name}」的规则 ——
+  return {
+    ...base,
+    group: `—— 以下是群聊「${group.name}」的规则 ——
 ${adminLine}群聊记录里,以「名字」开头的发言是其他居民说的,以"岛主:"开头的是岛主说的。
 - 值守模式:岛主的消息默认由管理员应答和调度;被岛主 @点名 时由你发言;
 - 先读后说:把大家说过的话读完再开口,只说有新内容的东西;没有可补充的就只回 [PASS];
 - 在群里汇报关键进度,而不是每一步;
 - 居民们性格各异:闲聊时互相接梗、逗趣都欢迎,气氛自然些;谈正事时保持克制,各司其职;
 - 你是管理员时:需要分工就用 send_message 私信派工——打听商量就等对方回复,要让成员把成果交到群里的就选不必回复、并交代 TA 干完用 post_to_group 发到群里,最后在群里总结收尾,不要抢着替成员干活。${announcement}`
+  }
+}
+
+/** 兼容入口(旧单消息场景/快照测试):S1 + '\n\n' + S2 + '\n\n' + S3 拼接 */
+export function buildGroupSystemPrompt(
+  bot: Bot,
+  space: SpaceInfo | null,
+  roster: RosterEntry[],
+  group: GroupBrief
+): string {
+  const { stable, runtime, group: rules } = buildGroupPromptParts(bot, space, roster, group)
+  return `${stable}\n\n${runtime}\n\n${rules}`
 }
 
 /** 开场白(0.9.2 自走查 A2 定稿):写死的固定 greeting,不走大模型——

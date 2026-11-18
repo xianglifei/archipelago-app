@@ -35,12 +35,13 @@ import { attachmentLines, readImageDataUrl } from './attachments'
 import { parseAttachments } from '@shared/attachments-core'
 import { currentIslandUid } from './auth'
 import { memoryNote, reviewGroupTurn } from './memory'
-import { buildGroupSystemPrompt, type RosterEntry } from './prompts'
+import { buildGroupPromptParts, type RosterEntry } from './prompts'
 import {
   compactGroupIfNeeded,
   currentTimeLine,
   forceCompactGroup,
   gapMarker,
+  GROUP_CHECKPOINT_NOTE,
   groupSummaryRow,
   groupTailMessages,
   GROUP_RETRY_WINDOW,
@@ -386,21 +387,23 @@ function buildGroupTurnContext(
   limit = GROUP_TURN_WINDOW
 ): LlmMessage[] {
   const admin = group.members.find((m) => m.id === group.adminBotId)
+  // 系统提示三条 system 消息(2026-11-18 分层):S1 稳定核 → S2 运行时公告 → S3 群规则段,
+  // 越少变越靠前;群名/管理员/公告变化只废 S3 及其后
+  const parts = buildGroupPromptParts(bot, space, roster, {
+    name: group.name,
+    announcement: group.announcement,
+    adminName: admin?.name ?? 'Momo'
+  })
   const context: LlmMessage[] = [
-    {
-      role: 'system',
-      content: buildGroupSystemPrompt(bot, space, roster, {
-        name: group.name,
-        announcement: group.announcement,
-        adminName: admin?.name ?? 'Momo'
-      })
-    }
+    { role: 'system', content: parts.stable },
+    { role: 'system', content: parts.runtime },
+    { role: 'system', content: parts.group }
   ]
   const memory = memoryNote(bot.id)
   if (memory) context.push({ role: 'system', content: memory })
   const { summary, cutoffId } = groupSummaryRow(group.id)
   if (summary && (cutoffId ?? 0) > 0) {
-    context.push({ role: 'system', content: `[本群更早对话的摘要,仅供参考,不要主动复述]\n${summary}` })
+    context.push({ role: 'system', content: `${GROUP_CHECKPOINT_NOTE}\n${summary}` })
   }
   const names = new Map(listBots().map((b) => [b.id, b.name]))
   const rows = groupTailMessages(group.id).slice(-limit)

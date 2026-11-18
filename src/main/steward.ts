@@ -11,7 +11,14 @@ import { getDb, nowIso } from './store'
 import { getSpace } from './space'
 import { listMessages, type SessionRow } from './sessions'
 import { attachmentLines } from './attachments'
-import { STEWARD_SYSTEM_PROMPT, buildStewardUserPrompt, buildSystemPrompt, type RosterEntry } from './prompts'
+import {
+  STEWARD_SYSTEM_PROMPT,
+  buildGroupPromptParts,
+  buildStewardUserPrompt,
+  buildSystemPromptParts,
+  type GroupBrief,
+  type RosterEntry
+} from './prompts'
 
 // 上下文管家(§7.1 + 2026-10-28 时间感知/群聊压缩/超长兜底三需求):
 // - 估算上下文 token,超过水位线(0.8 × 可用窗口)时把早期对话压缩成检查点摘要
@@ -112,7 +119,64 @@ export function setWatermarkForTests(v: number | null): void {
   watermarkForTests = v
 }
 
-/** 组装发给模型的上下文:系统提示 + 记忆 + 检查点摘要 + 截断点之后的逐字消息(带时间锚) */
+/** 熟络档位判定(0.8 L2):累计对话消息达标即升温,不落库不评分;
+ *  buildContextMessages 与压缩事件快照共用同一口径 */
+export function familiarOf(history: ChatMessage[]): boolean {
+  return history.filter((m) => m.kind === 'chat' || m.kind === 'relation').length >= FAMILIAR_MESSAGE_COUNT
+}
+
+// ---- 段级 token 统计(FR3,2026-11-18 方案 - 系统提示词工程化)----------------------
+// 系统提示按段命名估 token,压缩事件落库 tokensBySection——预算控制(如 SKILL_INJECT_BUDGET
+// 扩展到全提示词)与水位线归因从此有数据;比率走 estimateTokensFor 同一校准通道
+
+export interface NamedSection {
+  name: string
+  text: string
+}
+
+/** 按段名累加 token 估算;同名段多次出现合并(纯函数,单测锁行为) */
+export function promptTokensBySection(key: string, sections: NamedSection[]): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const s of sections) out[s.name] = (out[s.name] ?? 0) + estimateTokensFor(key, s.text)
+  return out
+}
+
+const CHECKPOINT_NOTE = '[上下文检查点 · 此前对话的摘要,仅供参考,不要主动复述]'
+export const GROUP_CHECKPOINT_NOTE = '[本群更早对话的摘要,仅供参考,不要主动复述]'
+
+/** 单聊提示词段快照:S1 稳定核 + S2 运行时公告 + 记忆 + 检查点(历史转写不属提示词段) */
+function dmPromptSections(bot: Bot, session: SessionRow, summary: string | null): NamedSection[] {
+  const parts = buildSystemPromptParts(bot, getSpace(), currentRoster(), familiarOf(listMessages(session.id)))
+  const memory = memoryNote(bot.id)
+  return [
+    { name: 'stable', text: parts.stable },
+    { name: 'runtime', text: parts.runtime },
+    ...(memory ? [{ name: 'memory', text: memory }] : []),
+    ...(summary ? [{ name: 'checkpoint', text: `${CHECKPOINT_NOTE}\n${summary}` }] : [])
+  ]
+}
+
+/** 群聊提示词段快照:S1/S2/S3 + 记忆 + 群检查点;群名/管理员直查 groups 表(steward 不能反向 import groups,会环) */
+function groupPromptSections(bot: Bot, groupId: string): NamedSection[] {
+  const row = getDb()
+    .prepare('SELECT name, announcement, admin_bot_id FROM groups WHERE id = ?')
+    .get(groupId) as { name: string; announcement: string; admin_bot_id: string } | undefined
+  const adminName = row ? (listBots().find((b) => b.id === row.admin_bot_id)?.name ?? 'Momo') : 'Momo'
+  const brief: GroupBrief = { name: row?.name ?? '群聊', announcement: row?.announcement ?? '', adminName }
+  const parts = buildGroupPromptParts(bot, getSpace(), currentRoster(), brief)
+  const { summary } = groupSummaryRow(groupId)
+  const memory = memoryNote(bot.id)
+  return [
+    { name: 'stable', text: parts.stable },
+    { name: 'runtime', text: parts.runtime },
+    { name: 'group', text: parts.group },
+    ...(memory ? [{ name: 'memory', text: memory }] : []),
+    ...(summary ? [{ name: 'checkpoint', text: `${GROUP_CHECKPOINT_NOTE}\n${summary}` }] : [])
+  ]
+}
+
+/** 组装发给模型的上下文:系统提示(S1 稳定核 + S2 运行时公告两条 system 消息,2026-11-18 分层)
+ *  + 记忆 + 检查点摘要 + 截断点之后的逐字消息(带时间锚) */
 export function buildContextMessages(
   bot: Bot,
   space: SpaceInfo | null,
@@ -121,15 +185,19 @@ export function buildContextMessages(
   history: ChatMessage[]
 ): LlmMessage[] {
   // 熟络档位(0.8 L2):按累计对话量判定,不落库不评分;history 来自全量消息表,不受压缩影响
-  const familiar = history.filter((m) => m.kind === 'chat' || m.kind === 'relation').length >= FAMILIAR_MESSAGE_COUNT
-  const messages: LlmMessage[] = [{ role: 'system', content: buildSystemPrompt(bot, space, roster, familiar) }]
+  const parts = buildSystemPromptParts(bot, space, roster, familiarOf(history))
+  // S1 → S2 两条独立 system 消息:名册/权限档/技能/熟络变化只废 S2 及其后,不打穿 S1 前缀
+  const messages: LlmMessage[] = [
+    { role: 'system', content: parts.stable },
+    { role: 'system', content: parts.runtime }
+  ]
   const memory = memoryNote(bot.id)
   if (memory) messages.push({ role: 'system', content: memory })
   const cutoff = session.cutoffId ?? 0
   if (session.summary && cutoff > 0) {
     messages.push({
       role: 'system',
-      content: `[上下文检查点 · 此前对话的摘要,仅供参考,不要主动复述]\n${session.summary}`
+      content: `${CHECKPOINT_NOTE}\n${session.summary}`
     })
   }
   let prev: ChatMessage | null = null
@@ -245,7 +313,13 @@ async function summarizeDm(bot: Bot, session: SessionRow, tail: ChatMessage[], k
     .run(
       session.id,
       'compact',
-      JSON.stringify({ summarized: toSummarize.length, cutoff: newCutoff, tokensEstimated: true }),
+      JSON.stringify({
+        summarized: toSummarize.length,
+        cutoff: newCutoff,
+        tokensEstimated: true,
+        // 段级 token 快照(FR3):摘要用刚写回的新 summary,反映下回合实际注入的检查点
+        tokensBySection: promptTokensBySection(session.id, dmPromptSections(bot, session, summary))
+      }),
       nowIso()
     )
   return true
@@ -349,7 +423,15 @@ async function summarizeGroup(
   }
   getDb()
     .prepare("INSERT INTO context_events (session_id, kind, detail, created_at) VALUES (?, 'group-compact', ?, ?)")
-    .run(groupId, JSON.stringify({ summarized: toSummarize.length, cutoff: newCutoff }), nowIso())
+    .run(
+      groupId,
+      JSON.stringify({
+        summarized: toSummarize.length,
+        cutoff: newCutoff,
+        tokensBySection: promptTokensBySection(`group:${groupId}`, groupPromptSections(bot, groupId))
+      }),
+      nowIso()
+    )
   return true
 }
 
