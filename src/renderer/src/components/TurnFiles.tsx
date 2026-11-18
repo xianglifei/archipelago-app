@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ChevronDown, ChevronRight, ExternalLink, FolderOpen } from 'lucide-react'
 import { api } from '../api'
 import { useTranslation } from '../i18n'
@@ -10,6 +10,18 @@ import {
   type TurnFileEntry
 } from '../utils/turn-files'
 import type { TimelineItem } from '../utils/turn-display'
+import type { FilesOpenWithFail } from '@shared/types'
+
+// 「打开 ▾」失败码 → 词典 key(与主进程 open-with.ts 的 FilesOpenWithFail 一一对应;
+// Record 而非拼接 key:新增码时 typecheck 在这里强制补词典,不靠人记)
+const OPEN_WITH_ERR_KEY: Record<FilesOpenWithFail, string> = {
+  'bad-path': 'chat.turnFiles.openErr.badPath',
+  'unsupported-platform': 'chat.turnFiles.openErr.unsupported',
+  'not-found': 'chat.turnFiles.openErr.notFound',
+  'no-access': 'chat.turnFiles.openErr.noAccess',
+  'app-not-found': 'chat.turnFiles.openErr.appNotFound',
+  'open-failed': 'chat.turnFiles.openErr.openFailed'
+}
 
 // 回合改动文件卡(2026-11-18 样式专项拍板:S3 极简头 + 行尾「打开 ▾」分裂胶囊 + 统计槽 +N −N):
 // 挂在回合正文气泡之后(静默回信组同款),卡宽与消息列一致(.msg assistant 包裹)。
@@ -31,6 +43,8 @@ export function TurnFiles({ timeline }: { timeline: TimelineItem[] }) {
   const [openErr, setOpenErr] = useState<{ path: string; text: string } | null>(null)
   const [menu, setMenu] = useState<MenuState | null>(null)
   const [apps, setApps] = useState<string[]>([])
+  const appsLoadedRef = useRef(false) // 名单只拉一次:非 mac 返回空数组也算「已加载」,不随菜单开关反复 IPC
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const totals = useMemo(() => sumTurnFileStats(entries), [entries])
   const foldable = entries.length > TURN_FILES_COLLAPSE
@@ -38,7 +52,8 @@ export function TurnFiles({ timeline }: { timeline: TimelineItem[] }) {
 
   // 应用候选懒加载:菜单第一次打开才拉(macOS 才有名单;空数组=非 mac,隐藏「其他应用程序…」项)
   useEffect(() => {
-    if (!menu || apps.length > 0) return
+    if (!menu || appsLoadedRef.current) return
+    appsLoadedRef.current = true
     let alive = true
     void api
       .openWithApps()
@@ -49,7 +64,18 @@ export function TurnFiles({ timeline }: { timeline: TimelineItem[] }) {
     return () => {
       alive = false
     }
-  }, [menu, apps.length])
+  }, [menu])
+
+  // 菜单定位:fixed 弹层先按点击点向下偏(首帧占位),渲染后量实际尺寸钳进视口——
+  // 新回合的卡常在聊天底部(自动滚到底),不钳的话菜单下半截溢出窗外且 fixed 不随聊天滚动,够不着
+  useLayoutEffect(() => {
+    const el = menuRef.current
+    if (!menu || !el) return
+    const left = Math.max(8, Math.min(menu.x - 150, window.innerWidth - el.offsetWidth - 8))
+    const top = Math.max(8, Math.min(menu.y + 6, window.innerHeight - el.offsetHeight - 8))
+    el.style.left = `${left}px`
+    el.style.top = `${top}px`
+  }, [menu, apps.length]) // apps 到货菜单变高,重钳一次
 
   // 菜单外点击 / Esc 关闭(caret 按钮自带 stopPropagation,重开不会被本监听立即收走)
   useEffect(() => {
@@ -79,9 +105,9 @@ export function TurnFiles({ timeline }: { timeline: TimelineItem[] }) {
   }
 
   async function openWith(entry: TurnFileEntry, app: string): Promise<void> {
-    const err = await api.openWithApp(entry.path, app)
-    if (err) {
-      setOpenErr({ path: entry.path, text: err })
+    const code = await api.openWithApp(entry.path, app)
+    if (code) {
+      setOpenErr({ path: entry.path, text: t(OPEN_WITH_ERR_KEY[code]) })
       setTimeout(() => setOpenErr((cur) => (cur && cur.path === entry.path ? null : cur)), 3000)
     }
   }
@@ -171,6 +197,7 @@ export function TurnFiles({ timeline }: { timeline: TimelineItem[] }) {
       )}
       {menu && (
         <div
+          ref={menuRef}
           className="turn-files-menu"
           role="menu"
           style={{ left: Math.max(8, menu.x - 150), top: menu.y + 6 }}

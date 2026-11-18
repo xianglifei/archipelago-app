@@ -1,8 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
-import { readdirSync, statSync } from 'node:fs'
-import { execFile } from 'node:child_process'
+import { statSync } from 'node:fs'
 import type {
-  AttachmentIntakeItem, BootState, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
+  AttachmentIntakeItem, BootState, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, FilesOpenWithFail, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
 } from '@shared/types'
 import { EV, IPC } from '@shared/ipc-channels'
 import { getProvider } from '@shared/providers'
@@ -29,6 +28,7 @@ import { resolveApproval } from './approval'
 import { safetyGet, safetySetCustom } from './shell'
 import { chatExport } from './export'
 import { listBotFiles } from './fs-tools'
+import { listMacApps, openWithApp } from './open-with'
 import { ensureWorkspaceDir } from './workspace'
 import { expandHomePath, isMdReaderSender, openMdReader, readTextForMdReader } from './md-reader'
 import { isImgViewerSender, openImgViewer } from './img-viewer'
@@ -382,39 +382,13 @@ export function registerIpc(): void {
   })
 
   // 「打开 ▾」菜单(回合改动文件卡,2026-11-18):指定应用打开 + 应用候选名单。
-  // 指定应用仅 macOS 有系统语义(open -a);应用名单同样只列 macOS(/Applications 顶层),
-  // 其他平台返回空数组,渲染端据此隐藏「其他应用程序…」项
-  ipcMain.handle(IPC.FilesOpenWith, (_e, rawP: string, app: string): Promise<string> => {
-    if (typeof rawP !== 'string' || !rawP) return Promise.resolve('路径为空')
-    if (typeof app !== 'string' || !app.trim()) return Promise.resolve('应用名为空')
-    if (process.platform !== 'darwin') return Promise.resolve('此平台暂不支持指定应用打开')
-    const p = expandHomePath(rawP)
-    try {
-      statSync(p)
-    } catch (err) {
-      const code = (err as NodeJS.ErrnoException).code
-      if (code === 'ENOENT') return Promise.resolve('文件已不存在(可能已被移动或删除)')
-      return Promise.resolve(`群岛无法访问这个文件(${code ?? '未知错误'})`)
-    }
-    return new Promise((resolve) => {
-      const child = execFile('open', ['-a', app.trim(), p], (err) => {
-        resolve(err ? `无法用「${app.trim()}」打开:${err.message}` : '')
-      })
-      child.on('error', () => undefined) // 回调已兜,防 error 事件无人接变成未处理异常
-    })
-  })
+  // 逻辑(白名单校验、失败原因码)在 open-with.ts——主进程只回码,用户文案渲染层走词典;
+  // 指定应用与名单仅 macOS(/Applications 顶层),其他平台回 unsupported-platform / 空数组
+  ipcMain.handle(IPC.FilesOpenWith, (_e, rawP: string, app: string): Promise<FilesOpenWithFail | ''> =>
+    openWithApp(rawP, app)
+  )
 
-  ipcMain.handle(IPC.FilesOpenWithApps, (): string[] => {
-    if (process.platform !== 'darwin') return []
-    try {
-      return readdirSync('/Applications')
-        .filter((name) => name.endsWith('.app'))
-        .map((name) => name.slice(0, -4))
-        .sort((a, b) => a.localeCompare(b))
-    } catch {
-      return []
-    }
-  })
+  ipcMain.handle(IPC.FilesOpenWithApps, (): string[] => listMacApps())
 
   // 居民正文内嵌图(2026-11-05):本机路径 → 校验+缩放 → dataURL;失败回 reason 码,文案渲染层走词典
   ipcMain.handle(IPC.ImageRead, (_e, p: string): ImageReadResult => readImageForDisplay(p))

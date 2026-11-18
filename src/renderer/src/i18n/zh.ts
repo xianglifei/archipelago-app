@@ -134,7 +134,16 @@ export const zh = {
       open: '打开',
       openMenu: '打开方式',
       openWithLabel: '选择应用',
-      reveal: '在 Finder 中显示'
+      reveal: '在 Finder 中显示',
+      // 「打开 ▾」失败文案:主进程只回失败码(open-with.ts),这里按码出话
+      openErr: {
+        badPath: '路径为空',
+        unsupported: '此平台暂不支持用指定应用打开',
+        notFound: '文件已不存在(可能已被移动或删除)',
+        noAccess: '群岛无法访问这个文件(可能被系统隐私设置拦住了)',
+        appNotFound: '找不到这个应用(可能已被移除)',
+        openFailed: '用这个应用打开失败'
+      }
     }
   },
   approval: {

@@ -5,13 +5,14 @@ import { defineDocs } from 'fumadocs-mdx/macro';
 import { metaSchema, pageSchema } from 'fumadocs-core/source/schema';
 
 /**
- * 每页 frontmatter 在默认 schema 上追加两个字段:
- * - updated:最后复核日期(YYYY-MM-DD)。文档会腐化,页脚必须让人看出这页多久没动过
+ * 每页 frontmatter 在默认 schema 上追加两个字段(均为必填,缺了构建期就红——
+ * 页脚的「适用版本/最后更新」是防腐化公约,漏写要拦在 PR,不靠页脚静默兜底):
+ * - updated:最后复核日期(YYYY-MM-DD)
  * - appliesTo:适用客户端版本(如「≥ 1.5.0」),机制改动时先改这里
  */
 const docsPageSchema = pageSchema.extend({
-  updated: z.string().optional(),
-  appliesTo: z.string().optional(),
+  updated: z.string(),
+  appliesTo: z.string(),
 });
 
 const docs = defineDocs({

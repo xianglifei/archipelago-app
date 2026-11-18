@@ -529,11 +529,19 @@ export async function writeFileTool(
       if (fresh.mtimeMs !== prevMtimeMs || fresh.size !== prevSize) {
         return `文件在审批等待期间被别人改过(${abs}),这次写入没有执行。请重新 read_file 核对最新内容后再写。`
       }
-      // 改动统计(回合改动文件卡):覆盖前留一份旧全文,落笔后行差分
+      // 改动统计(回合改动文件卡):覆盖前留一份旧全文,落笔后行差分。
+      // 统计读单独兜错:文件此刻不可读(如审批等待期权限被改)只影响「不出数」,
+      // 不许把写入本身拖死——顺路增强不能改变写路径的成败语义,读不到就当作没有统计
       let beforeContent: string | null = null
-      if (statsOut) beforeContent = await fsp.readFile(abs, 'utf8')
-      await fsp.writeFile(abs, content, 'utf8')
       if (statsOut) {
+        try {
+          beforeContent = await fsp.readFile(abs, 'utf8')
+        } catch {
+          beforeContent = null
+        }
+      }
+      await fsp.writeFile(abs, content, 'utf8')
+      if (statsOut && beforeContent !== null) {
         const diff = countChangedLines(beforeContent, content)
         statsOut.add = diff.add
         statsOut.del = diff.del

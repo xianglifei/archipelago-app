@@ -134,7 +134,16 @@ export const en: typeof zh = {
       open: 'Open',
       openMenu: 'Open with',
       openWithLabel: 'Choose an app',
-      reveal: 'Show in Finder'
+      reveal: 'Show in Finder',
+      // "Open with" failures: the main process returns reason codes only (open-with.ts)
+      openErr: {
+        badPath: 'Empty path',
+        unsupported: 'Opening with a specific app is not supported on this platform',
+        notFound: 'This file no longer exists (it may have been moved or deleted)',
+        noAccess: 'Archipelago cannot access this file (possibly blocked by privacy settings)',
+        appNotFound: 'Cannot find this app (it may have been removed)',
+        openFailed: 'Failed to open with this app'
+      }
     }
   },
   approval: {

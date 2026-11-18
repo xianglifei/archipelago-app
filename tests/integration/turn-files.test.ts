@@ -2,7 +2,10 @@
 // 工具事件行落库(running)→ finishToolEvent 收尾带行级增删 meta 补丁 → listMessages 取回
 // → 渲染端 collectTurnFiles 同一条聚合输入形状,断言一行一个文件与增删累加。
 // schema 铺底同 task-threads.test.ts 的最小集(sessions/messages 两张表就够本链路)。
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import Database from 'better-sqlite3'
 
 const state = vi.hoisted(() => ({
@@ -27,9 +30,10 @@ vi.mock('../../src/main/store', () => ({
 }))
 
 import { finishToolEvent, insertMessage, listMessages } from '../../src/main/sessions'
+import { readFileTool, writeFileTool } from '../../src/main/fs-tools'
 import { collectTurnFiles, sumTurnFileStats } from '../../src/renderer/src/utils/turn-files'
 import type { TimelineItem } from '../../src/renderer/src/utils/turn-display'
-import type { ChatMessage, ToolEventMeta } from '@shared/types'
+import type { Bot, ChatMessage, ToolEventMeta } from '@shared/types'
 
 function freshDb(): Database.Database {
   const db = new Database(':memory:')
@@ -43,6 +47,7 @@ function freshDb(): Database.Database {
       reasoning TEXT, created_at TEXT NOT NULL, hidden INTEGER NOT NULL DEFAULT 0, kind TEXT NOT NULL DEFAULT 'chat',
       meta TEXT, exchange_id TEXT, turn_id TEXT, attachments TEXT
     );
+    CREATE TABLE audit (bot_id TEXT NOT NULL, kind TEXT NOT NULL, detail TEXT, created_at TEXT NOT NULL);
   `)
   return db
 }
@@ -126,5 +131,49 @@ describe('回合改动文件数据链路(落库 → 补丁 → 取回 → 聚合
     const done = collectTurnFiles(itemsOf('T3'))
     expect(done).toHaveLength(1)
     expect(done[0]).toMatchObject({ fileName: 'done.ts', add: 6, del: 0, count: 1 })
+  })
+})
+
+describe('writeFileTool 行级统计直通(真临时工作区)', () => {
+  // 覆盖写入前旧文不可读的回归(2026-11-18 评审 P2):统计读单独兜错,写入照常、统计不出数;
+  // 顺带覆盖正常链路 read → 覆盖 write → statsOut 回填真实差分。
+  // chmod 语义只在非 win 非 root 下成立(root 读得了只写文件,win 权限位近似无效)
+  const canChmod = process.platform !== 'win32' && process.getuid?.() !== 0
+  let ws = ''
+  let bot: Bot
+
+  beforeEach(() => {
+    ws = fs.mkdtempSync(path.join(os.tmpdir(), 'qd-turn-files-'))
+    // 写路径只碰 bot.id 与 bot.workspacePath(工作区内直放行,不触审批链)
+    bot = { id: 'bot-stats', workspacePath: ws } as unknown as Bot
+  })
+  afterEach(() => {
+    fs.rmSync(ws, { recursive: true, force: true })
+  })
+
+  it('旧文不可读(只写权限)时写入照常执行、统计不出数——统计读不许拖死写入', async () => {
+    if (!canChmod) return
+    const target = path.join(ws, 'wo.txt')
+    fs.writeFileSync(target, '旧内容\n第二行\n')
+    await readFileTool(bot, { path: target }) // 先读后写:mtime 登记过才允许覆盖
+    fs.chmodSync(target, 0o200) // 只写:stat 照常、readFile 必 EACCES
+    const stats: { add?: number; del?: number } = {}
+    const out = await writeFileTool(bot, { path: target, content: '新内容\n' }, undefined, undefined, undefined, stats)
+    expect(out.startsWith('已写入')).toBe(true)
+    fs.chmodSync(target, 0o600) // 恢复可读,校验与清理才走得动
+    expect(fs.readFileSync(target, 'utf8')).toBe('新内容\n')
+    // 读不到旧文 → 没有统计(渲染端对缺省不渲染数字槽,语义自洽)
+    expect(stats.add).toBeUndefined()
+    expect(stats.del).toBeUndefined()
+  })
+
+  it('正常链路:read 后覆盖写,statsOut 回填真实行差分', async () => {
+    const target = path.join(ws, 'ok.txt')
+    fs.writeFileSync(target, 'a\nb\nc\n')
+    await readFileTool(bot, { path: target })
+    const stats: { add?: number; del?: number } = {}
+    const out = await writeFileTool(bot, { path: target, content: 'a\nX\nc\n' }, undefined, undefined, undefined, stats)
+    expect(out.startsWith('已写入')).toBe(true)
+    expect(stats).toEqual({ add: 1, del: 1 })
   })
 })

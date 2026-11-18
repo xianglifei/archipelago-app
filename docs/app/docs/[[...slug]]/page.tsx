@@ -41,9 +41,9 @@ export default async function Page(props: PageProps<'/docs/[[...slug]]'>) {
       {/* 文档会腐化:每页必须能看出「适用哪个版本、上次什么时候复核」 */}
       <div className="mt-14 border-t pt-4 text-xs text-fd-muted-foreground">
         <p>
-          适用版本:{page.data.appliesTo ?? 'v1.5.2'}
+          适用版本:{page.data.appliesTo}
           <span className="mx-2">·</span>
-          最后更新:{page.data.updated ?? '2026-11-13'}
+          最后更新:{page.data.updated}
         </p>
         <p className="mt-1">
           发现写错或过时?点上方「编辑此页」提 PR,或在{' '}

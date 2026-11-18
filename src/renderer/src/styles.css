@@ -1119,6 +1119,12 @@ a {
   gap: 16px;
 }
 
+/* 聊天流子项一律不收缩(2026-11-18 改动文件卡实测翻车后立的通则):flex column 里子项默认
+   可收缩,带 overflow:hidden 裁圆角的卡会被压到最小高度成一条细线——内容超出本就该走容器滚动 */
+.chat-body > * {
+  flex-shrink: 0;
+}
+
 .chat-empty {
   margin: auto;
   text-align: center;
@@ -3038,10 +3044,7 @@ a {
 .turn-files {
   align-self: flex-start;
   width: 78%;
-  /* .chat-body 是 flex column,内容超出本应滚动;但 flex 子项默认可收缩,
-     本卡 overflow:hidden 使 flex 最小高度归零,内容超高时会被压成一条线(2026-11-18 实测翻车)。
-     聊天流子项永远不该收缩——禁掉 shrink,让容器走滚动 */
-  flex-shrink: 0;
+  /* 收缩防护走 .chat-body > * 通则(flex-shrink:0),本卡 overflow:hidden 同样受其保护 */
   min-width: 0;
   display: flex;
   flex-direction: column;

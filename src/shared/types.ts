@@ -204,6 +204,16 @@ export type ImageFullReadResult =
   | { ok: true; dataUrl: string; size: number }
   | { ok: false; reason: 'bad-path' | 'not-found' | 'no-access' | 'not-image' | 'too-large' }
 
+/** 「打开 ▾」指定应用打开(回合改动文件卡,2026-11-18)的失败原因码;'' = 成功。
+ *  主进程 open-with.ts 只回码不回文案(与 ImageRead 同口径),用户文案渲染层走词典 */
+export type FilesOpenWithFail =
+  | 'bad-path'
+  | 'unsupported-platform'
+  | 'not-found'
+  | 'no-access'
+  | 'app-not-found'
+  | 'open-failed'
+
 /** 内置 md 阅读器(2026-11-06 只读拍板):读取 .md 文本的结果;失败只回 reason 码,文案由阅读器窗口走词典 */
 export type MdTextReadResult =
   | { ok: true; content: string; size: number; mtimeMs: number }
@@ -995,8 +1005,8 @@ export interface RendererApi {
   revealInFolder(path: string): Promise<void>
   /** 用系统默认应用打开该文件;返回错误文案,空串 = 成功 */
   openPath(path: string): Promise<string>
-  /** 用指定应用打开该文件(macOS open -a);返回错误文案,空串 = 成功。仅 macOS 支持指定应用 */
-  openWithApp(path: string, app: string): Promise<string>
+  /** 用指定应用打开该文件(macOS open -a,应用名须命中本机 /Applications 名单);'' = 成功,否则为失败原因码。仅 macOS 支持 */
+  openWithApp(path: string, app: string): Promise<FilesOpenWithFail | ''>
   /** 可选用的应用名单(macOS 读 /Applications,应用名去 .app 后缀排序;其他平台返回空数组) */
   openWithApps(): Promise<string[]>
   /** 内置 md 阅读器(2026-11-06 只读):读 .md 文本(≤256KB,非 md/超限/二进制诚实报错) */
