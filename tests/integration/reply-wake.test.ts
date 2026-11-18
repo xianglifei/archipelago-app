@@ -424,7 +424,9 @@ describe('回复唤醒:等回信私信全面异步', () => {
     expect(state.calls).toHaveLength(3)
   })
 
-  it('唤醒重试 3 次耗尽后放弃,不无限重试(投影行已落库可见,不黑洞)', async () => {
+  // 时序敏感:两跳 50ms 冷却 + 四个回合收尾在 CI 慢 runner 上可被拉长数倍(2026-11-13 与
+  // 2026-11-18 两次 CI 挂红均是 waitUntil 3s 默认预算烧穿误报),预算放宽到 10s、测试超时 15s
+  it('唤醒重试 3 次耗尽后放弃,不无限重试(投影行已落库可见,不黑洞)', { timeout: 15_000 }, async () => {
     state.script = [
       { content: '回信' },
       () => {
@@ -438,7 +440,7 @@ describe('回复唤醒:等回信私信全面异步', () => {
       }
     ]
     await sendLetter()
-    await waitUntil(() => state.calls.length >= 4)
+    await waitUntil(() => state.calls.length >= 4, 10_000)
     await new Promise((r) => setTimeout(r, 200)) // 冷却窗外不应有第 5 次
     expect(state.calls).toHaveLength(4)
     expect(rowsOf('bot-ava').some((r) => r.kind === 'chat' && metaOf(r).relay)).toBe(false)
