@@ -8,7 +8,8 @@ import path from 'node:path'
 const execMock = vi.hoisted(() => vi.fn())
 vi.mock('node:child_process', () => ({ execFile: execMock }))
 
-// 相对导入:裸 'src/main/…' 形态只对老模块稳定解析(机制未明),新文件一律走相对路径(同 integration 惯例)
+// 相对导入:裸 'src/main/…' 只有 tsc 认(baseUrl 兜底),vite 解析器不认(无兜底无 alias,
+// 全新环境 ERR_MODULE_NOT_FOUND,本地被 vitest 缓存掩盖——见 turn-files.test.ts 注释)
 import { openWithApp } from '../../src/main/open-with'
 
 beforeEach(() => {

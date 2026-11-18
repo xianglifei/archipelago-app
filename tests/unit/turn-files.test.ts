@@ -3,15 +3,18 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 const ROOT = join(__dirname, '..', '..')
-import { countChangedLines } from 'src/main/fs-tools'
+// 相对导入:裸 'src/…' 只有 tsc 认(tsconfig.test.json baseUrl 兜底,typecheck 永远绿),
+// vite 解析器没有 baseUrl 兜底也没配 src alias,全新环境(如 CI)直接 ERR_MODULE_NOT_FOUND,
+// 本地则被 vitest 缓存掩盖(bcc71ff CI 事故根因)——测试一律走相对路径(同 integration 惯例)
+import { countChangedLines } from '../../src/main/fs-tools'
 import {
   TURN_FILES_COLLAPSE,
   TURN_FILE_TOOLS,
   collectTurnFiles,
   sumTurnFileStats,
   type TurnFileEntry
-} from 'src/renderer/src/utils/turn-files'
-import type { TimelineItem } from 'src/renderer/src/utils/turn-display'
+} from '../../src/renderer/src/utils/turn-files'
+import type { TimelineItem } from '../../src/renderer/src/utils/turn-display'
 import type { ChatMessage, ToolEventMeta } from '@shared/types'
 
 // 回合改动文件卡纯逻辑(2026-11-18 方案):行级增删统计(countChangedLines)+
