@@ -121,6 +121,11 @@ export function onThreadsChanged(cb: () => void): () => void {
   return api.on(EV.ThreadsChanged, () => cb())
 }
 
+// 看板卡片有变动(2026-11-19):无载荷,收到即重拉 cardsList
+export function onCardsChanged(cb: () => void): () => void {
+  return api.on(EV.CardsChanged, () => cb())
+}
+
 export function onFocusBot(cb: (e: FocusBotEvent) => void): () => void {
   return api.on(EV.FocusBot, (d) => cb(d as FocusBotEvent))
 }

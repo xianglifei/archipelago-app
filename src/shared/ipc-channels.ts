@@ -71,6 +71,17 @@ export const IPC = {
   TaskThreadClose: 'arch:task-thread:close',
   /** 更换/设定任务的工作目录绑定(2026-11-10 第一批):走绑定授权卡 */
   TaskThreadSetWorkdir: 'arch:task-thread:set-workdir',
+  // 看板卡片(2026-11-19 看板):卡片=未开跑的任务会话预约+进度投影,执行复用任务会话链路
+  CardsList: 'arch:cards:list',
+  CardCreate: 'arch:card:create',
+  CardUpdate: 'arch:card:update',
+  CardDelete: 'arch:card:delete',
+  CardRun: 'arch:card:run',
+  CardDone: 'arch:card:done',
+  CardUndone: 'arch:card:undone',
+  /** 看板偏好与设置(2026-11-19 第二批):视图/已完成折叠走 meta KV,收尾提示词模板同存 */
+  CardsPrefsGet: 'arch:cards:prefs:get',
+  CardsPrefsSet: 'arch:cards:prefs:set',
   ExchangeDetail: 'arch:exchange:detail',
   SettingsGet: 'arch:settings:get',
   SettingsSave: 'arch:settings:save',
@@ -173,6 +184,9 @@ export const EV = {
   /** 任务会话列表有变动(2026-11-06 新建任务):新建/改名/结束/标题自动生成;
    *  刻意无载荷(同 TurnChanged 口径):渲染端收到即重拉 taskThreadsList 与消息列表预览 */
   ThreadsChanged: 'ev:threads:changed',
+  /** 看板卡片有变动(2026-11-19 看板):新建/编辑/删除/执行/完成与回合落定推进;
+   *  刻意无载荷(同 ThreadsChanged 口径):渲染端收到即重拉 cardsList */
+  CardsChanged: 'ev:cards:changed',
   /** 技能卡有变动(记卡/更新/装卸),打开中的档案技能页签静默重载 */
   SkillsChanged: 'ev:skills:changed',
   /** MCP 连接器增删/停用/分配变化(技能中心与档案页签刷新) */

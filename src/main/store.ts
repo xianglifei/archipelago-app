@@ -7,6 +7,7 @@ import { requireDataRoot } from './paths'
 import { SKILLS_DDL } from './skills-core'
 import { TASKS_DDL } from './tasks'
 import { TASK_THREADS_DDL, migrateTaskThreadsWorkdirColumns } from './task-threads'
+import { CARDS_DDL } from './kanban-core'
 import { POST_DDL } from '@shared/post-core'
 import { MCP_DDL } from './mcp-core'
 
@@ -149,6 +150,10 @@ function migrate(database: Database.Database): void {
   database.exec(TASK_THREADS_DDL)
   // 任务会话工作目录绑定列族(2026-11-10 第一批):存量库守卫式补列,单点在 task-threads.ts
   migrateTaskThreadsWorkdirColumns(database)
+
+  // 看板卡片(2026-11-19 需求 - 看板):cards 整表新增幂等 CREATE——卡片=未开跑的任务会话
+  // 预约+进度投影,执行体恒为任务会话;四列归属读时推导不落列;DDL 单点在 kanban-core.ts(单测同源验证)
+  database.exec(CARDS_DDL)
 
   // 增量迁移:sessions.ref——任务会话行的线程指向(kind='task' 时 ref=task_threads.id);
   // 旧库补列全 NULL=普通会话,存量零改动(与 messages 列族同款 pragma 守卫增量迁移)

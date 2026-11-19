@@ -329,6 +329,11 @@ function mount(accountId: string): void {
   void import('./task-workdir')
     .then((m) => m.recoverTaskWorkdirs())
     .catch(() => undefined)
+  // 看板(2026-11-19 需求 - 看板):注册线程回合落定监听(chat.ts finally 回调进 kanban)+
+  // 启动清理(孤儿收尾/断链准备,两个仅有的持久过渡态);失败静默(清理幂等,下次挂载再来)
+  void import('./kanban')
+    .then((m) => m.initKanban())
+    .catch(() => undefined)
 }
 
 /**

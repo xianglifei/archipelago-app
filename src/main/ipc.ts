@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { statSync } from 'node:fs'
 import type {
-  AttachmentIntakeItem, BootState, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, FilesOpenWithFail, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
+  AttachmentIntakeItem, BootState, BoardCard, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, CardActionResult, CardInput, CardsPrefs, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, FilesOpenWithFail, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
 } from '@shared/types'
 import { EV, IPC } from '@shared/ipc-channels'
 import { getProvider } from '@shared/providers'
@@ -35,6 +35,7 @@ import { isImgViewerSender, openImgViewer } from './img-viewer'
 import { botCapabilities } from './tools'
 import { botTaskEntries, cancelTaskByOwner } from './tasks'
 import { closeTaskThread, createTaskThread, getTaskThread, listTaskThreads, renameTaskThread } from './task-threads'
+import { cardDone, cardsPrefsGet, cardsPrefsSet, createCard, deleteCard, listCards, runCard, undoneCard, updateCard } from './kanban'
 import { bindTaskWorkdir, releaseTaskWorkdir } from './task-workdir'
 import {
   botSkillEntries,
@@ -603,6 +604,30 @@ export function registerIpc(): void {
       endTaskThreadClose(id)
     }
   })
+
+  // ---- 看板卡片(2026-11-19 需求 - 看板:卡片与任务会话联动)----
+  // 卡片=未开跑的任务会话预约+进度投影:执行/完成复用任务会话链路,进度经回合落定回调推进
+  ipcMain.handle(IPC.CardsList, (): BoardCard[] => listCards())
+
+  ipcMain.handle(IPC.CardCreate, (_e, input: CardInput): BoardCard => createCard(input))
+
+  ipcMain.handle(IPC.CardUpdate, (_e, { id, input }: { id: string; input: CardInput }): BoardCard => updateCard(id, input))
+
+  ipcMain.handle(IPC.CardDelete, (_e, id: string): void => {
+    deleteCard(id)
+  })
+
+  // 执行:同步段(建线程/校验/钉标题)当场完成并返回;绑定授权与投正文在后台链推进(EV.CardsChanged 通知)
+  ipcMain.handle(IPC.CardRun, (e, id: string): CardActionResult => runCard(id, e.sender))
+
+  ipcMain.handle(IPC.CardDone, (e, id: string): Promise<CardActionResult> => cardDone(id, e.sender))
+
+  ipcMain.handle(IPC.CardUndone, (_e, id: string): BoardCard => undoneCard(id))
+
+  // 看板偏好与设置(第二批):视图/折叠/收尾提示词模板,meta KV 持久
+  ipcMain.handle(IPC.CardsPrefsGet, (): CardsPrefs & { finishPromptDefault: string } => cardsPrefsGet())
+
+  ipcMain.handle(IPC.CardsPrefsSet, (_e, patch: Partial<CardsPrefs>): CardsPrefs => cardsPrefsSet(patch))
 
   // 多选消息导出 Markdown(2026-11-02):主进程查库拼装;save 弹保存对话框写文件,copy 返回 md 文本
   ipcMain.handle(IPC.ChatExport, (_e, input: ChatExportInput) => chatExport(input))

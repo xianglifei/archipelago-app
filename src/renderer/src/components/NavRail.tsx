@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Mail, MessageCircle, Settings, Sparkles } from 'lucide-react'
+import { Mail, MessageCircle, Settings, Sparkles, SquareKanban } from 'lucide-react'
 import { api, onWindowMaximized } from '../api'
 import { useTranslation } from '../i18n'
 
-/** 导航栏视图(2026-10-28 左侧导航栏方案):消息 = 既有消息界面;邮局 = 岛际信件;技能中心 = 技能货架与管理;设置 = 内嵌设置面板 */
-export type RailView = 'messages' | 'post' | 'skills' | 'settings'
+/** 导航栏视图(2026-10-28 左侧导航栏方案):消息 = 既有消息界面;邮局 = 岛际信件;技能中心 = 技能货架与管理;
+ *  看板 = 卡片与任务会话联动(2026-11-19);设置 = 内嵌设置面板 */
+export type RailView = 'messages' | 'post' | 'skills' | 'kanban' | 'settings'
 
 /** Windows 自绘窗口三键(2026-11-04 方案 C,Felix 拍板):frame:false + 左上 ─ □ ×,与 Mac 红绿灯同位
  *  (84px 导航栏顶部 38px 区);Windows 风格图标(三色圆点在 Windows 违和),关闭键 hover 红底。
@@ -110,6 +111,15 @@ export default function NavRail({
         onClick={() => onSelect('skills')}
       >
         <Sparkles size={20} />
+      </button>
+      {/* 看板(2026-11-19):卡片与任务会话联动——四列由回合事件驱动,无拖拽 */}
+      <button
+        className={`rail-btn ${view === 'kanban' ? 'active' : ''}`}
+        title={t('nav.kanban')}
+        aria-current={view === 'kanban' ? 'true' : 'false'}
+        onClick={() => onSelect('kanban')}
+      >
+        <SquareKanban size={20} />
       </button>
       <div className="rail-spacer" aria-hidden="true" />
       <button

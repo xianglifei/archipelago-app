@@ -93,6 +93,15 @@ export function activeTurnKinds(): Map<string, TurnKind> {
   return new Map([...active].map(([key, entry]) => [key, entry.kind]))
 }
 
+// 看板卡片回合落定监听(2026-11-19 看板):任务会话回合收口(全路径必经的 finally)时回调,
+// 看板模块据此推进卡片时间戳与两段式完成(同定时任务 onSettled 的注册制思路);注册制避免
+// chat↔kanban 循环依赖——kanban 要用 sendTaskThreadMessage/activeTurnKinds,反向 import 会成环
+let threadSettleListener: ((threadId: string, ok: boolean) => void) | null = null
+
+export function setThreadSettleListener(fn: ((threadId: string, ok: boolean) => void) | null): void {
+  threadSettleListener = fn
+}
+
 // ---- 私信三队列(件 3 通报消化 / 2026-11-05 回复唤醒:排队回信 + 唤醒转述)----
 // 都是内存态,重启即静默——消息本体已落库进上下文,该居民下次任何回合自然看到(拍板 6);
 // 三个队列共用「空闲立即起回合、忙则等当前回合结束再泵」的节拍(runTurn 收尾统一泵)
@@ -1200,6 +1209,16 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
     broadcastTurnChanged()
     // 回合结束,「本回合不再问」的免问表随之失效(键=线程:只清本线程的,并行线程的免问不受牵连)
     clearTurnApprovals(turnKey)
+    // 看板卡片推进(2026-11-19):线程回合收口通知看板(有线程卡才推进,无卡零开销);
+    // result 在 try 内首赋值前抛错时可能未初始化,?. 兜底=按失败处理;独立 try/catch——
+    // 看板故障不许影响回合本身
+    if (opts.thread && threadSettleListener) {
+      try {
+        threadSettleListener(opts.thread.threadId, result?.ok === true)
+      } catch (err) {
+        console.error('[chat] 看板回合落定回调失败:', err)
+      }
+    }
   }
 
   // 缓存观测(P1b,方案 - 工具注入缓存稳定性 2026-11-19):每用户回合一行 turn-usage,

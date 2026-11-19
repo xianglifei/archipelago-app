@@ -17,11 +17,12 @@
 
 渲染层禁止硬编码中文——界面文案一律走词典:`zh.ts` 加词条 → 组件 `t('section.key')` → `en.ts` 同步补(`en: typeof zh` 在 typecheck 强制 parity)。主进程给用户看的字(菜单/系统通知/对话框/About)走 `ui-strings.ts` 的 `uiStr()`。写完码跑 typecheck 即被强制检查(check-ui-locale 扫硬编码 CJK;check-i18n-keys 校验在用 key 命中词典)。
 
-## 命名公约:「任务」两个家族
+## 命名公约:「任务」两个家族 + 看板一族
 
 - **定时任务族**(时间表驱动):表 `tasks`/`task_runs`、模块 `tasks.ts`/`tasks-core.ts`、工具 `set_task`/`update_task`/`cancel_task`/`list_tasks`、类型 `BotTask`、回合 `TurnKind='scheduled'`。
 - **任务会话族**(上下文隔离会话):表 `task_threads`、模块 `task-threads.ts`、工具 `open_task`/`rename_task`、类型 `TaskThreadInfo`、回合 `TurnKind='chat'`。
-- 口诀:裸 `Task*`=定时任务;带 `Thread`=任务会话。
+- **看板族**(进度投影,执行体恒为任务会话):表 `cards`、模块 `kanban.ts`/`kanban-core.ts`、类型 `BoardCard`、IPC `Card*`、广播 `EV.CardsChanged`、视图 `KanbanView`。
+- 口诀:裸 `Task*`=定时任务;带 `Thread`=任务会话;带 `Card`=看板卡。
 
 ## 设置页设计规范
 

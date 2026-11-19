@@ -7728,3 +7728,490 @@ a {
   max-height: 120px;
   overflow-y: auto;
 }
+
+/* ---- 看板(2026-11-19 需求 - 看板:卡片与任务会话联动)----
+   四列布局:整页结构与 PostView 同构(flex:1 纵向);列容器浅底圆角,卡片 panel 底细边;
+   动作按钮复用 .btn.sm / .icon-btn.sm 两档,不自定 padding。 */
+.kanban-view {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+.kanban-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px 10px;
+  -webkit-app-region: drag;
+}
+/* 头部按钮必须显式 no-drag(同 post-head 教训):drag 区里的子按钮不声明,
+   点击会被当窗口拖拽吞掉,切视图/设置/新建全点不动 */
+.kanban-head button {
+  -webkit-app-region: no-drag;
+}
+.kanban-head h1 {
+  font-size: 17px;
+  font-weight: 600;
+  margin: 0;
+}
+.kanban-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+.kanban-spacer {
+  flex: 1;
+}
+.kanban-board {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  gap: 14px;
+  padding: 0 20px 16px;
+  overflow-x: auto;
+}
+.kanban-col {
+  flex: 1 1 0;
+  min-width: 232px;
+  display: flex;
+  flex-direction: column;
+  background: var(--sidebar);
+  border-radius: var(--radius);
+  padding: 10px;
+  min-height: 0;
+}
+.kanban-col-title {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 2px 6px 8px;
+}
+.kanban-cards {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kanban-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 9px 11px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.kanban-card:hover {
+  border-color: var(--accent);
+}
+.kanban-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.kanban-seq {
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.kanban-assignee {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text);
+}
+.kanban-assignee.none {
+  color: var(--muted);
+}
+.kanban-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  word-break: break-word;
+}
+.kanban-card-body {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  white-space: pre-line;
+}
+.kanban-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.kanban-badge {
+  font-size: 11px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.kanban-badge.warn {
+  background: var(--warning-bg);
+  color: var(--warning);
+}
+.kanban-badge.danger {
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+.kanban-card-error {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--danger);
+  line-height: 1.45;
+  word-break: break-word;
+}
+.kanban-card-note {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+.kanban-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+/* 走查拍板:窄窗口动作按钮不折行——按钮不收缩、文字不换行 */
+.kanban-card-actions .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.kanban-done-toggle {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--muted);
+  text-align: left;
+  padding: 2px 6px 8px;
+  cursor: pointer;
+}
+.kanban-done-toggle:hover {
+  color: var(--text);
+}
+.kanban-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--muted);
+}
+.kanban-empty .sub {
+  font-size: 12px;
+}
+/* 编辑弹窗字段 */
+.kanban-editor {
+  width: min(560px, 92vw);
+}
+.kanban-field {
+  display: block;
+  margin-bottom: 12px;
+}
+.kanban-field > span {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+.kanban-field input,
+.kanban-field textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+}
+.kanban-field textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+.kanban-field textarea:disabled {
+  background: var(--soft);
+  color: var(--muted);
+}
+.kanban-locked-note {
+  margin: 5px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* ---- 看板·第二批(列表视图/视图切换/设置弹窗诊断)---- */
+.kanban-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.kanban-view-toggle button {
+  border: none;
+  background: none;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.kanban-view-toggle button.on {
+  background: var(--soft);
+  color: var(--text);
+}
+.kanban-list-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 20px 16px;
+}
+.kanban-list {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.kanban-list thead {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+}
+.kanban-list th,
+.kanban-list td {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.kanban-list tbody tr:last-child td {
+  border-bottom: none;
+}
+.kanban-list tbody tr {
+  cursor: pointer;
+}
+.kanban-list tbody tr:hover {
+  background: var(--soft);
+}
+.kanban-th {
+  border: none;
+  background: none;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 8px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.kanban-th.on {
+  color: var(--text);
+}
+.kanban-th-plain,
+.kanban-th-blank {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.kanban-cell-title {
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 500;
+}
+.kanban-cell-title .kanban-badge {
+  margin-left: 6px;
+}
+.kanban-row-actions {
+  white-space: nowrap;
+}
+
+/* ---- 看板·设置二级页面(2026-11-19 走查拍板:弹窗改页)----
+   沿用设置页设计规范总纲:小节标题灰常规体(须覆 .field-label 的 600),
+   内容进 .settings-card,多行 .settings-card-row 发丝线分组 */
+.kanban-settings {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  max-width: 640px;
+  width: 100%;
+  padding: 0 20px 16px;
+}
+.kanban-settings .card-section-title {
+  font-weight: 400;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.kanban-settings textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: inherit;
+  resize: vertical;
+  min-height: 88px;
+}
+/* ---- 看板·收尾打磨(需求 §6.2/§6.4/§13-3):角标内嵌三点动效 + 完成轻提示 ---- */
+.kanban-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.kanban-hint {
+  width: fit-content;
+  margin: 0 20px 6px;
+  padding: 3px 12px;
+  border-radius: 999px;
+  background: var(--accent-weak);
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* ---- 看板·「完成之后」三选(对齐 dsh completion 设置;radio 行)----
+   选中态走查加浓:仅描边太弱读不出——整行浅底染色 + 名字变色 + 描边 + 实心圆点四重信号 */
+.kanban-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.kanban-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: 100%;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.kanban-choice.on {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+.kanban-choice-dot {
+  /* display 显式声明(flex 子项兜底):inline span 不吃宽高,圆点会塌成看不见 */
+  display: block;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+.kanban-choice.on .kanban-choice-dot {
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: inset 0 0 0 2.5px var(--accent-weak); /* 同色内环,实心点带层次不糊成一块 */
+}
+.kanban-choice.on .kanban-choice-name {
+  color: var(--accent);
+}
+.kanban-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kanban-choice-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.kanban-choice-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* ---- 看板·走查第三轮(完成之后三选内联/即时保存/chips 居民选/应用内确认)---- */
+.kanban-choice-desc {
+  white-space: pre-line; /* 智能档说明按 \n 分两行(走查拍板) */
+}
+/* 提示词文本域内联在「发送一条收尾提示词」选项正下方(不再是下方独立卡) */
+.kanban-prompt-inline {
+  margin: -2px 0 8px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.kanban-prompt-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kanban-saved {
+  font-size: 11px;
+  color: var(--accent);
+}
+/* 编辑器居民单选:横向换行 chips(弃纵向滚动列表) */
+.kanban-pick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.kanban-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px 3px 4px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+}
+.kanban-chip.on {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+/* 应用内确认弹窗(删卡/放弃未保存改动) */
+.kanban-confirm {
+  width: min(360px, 90vw);
+}
+.kanban-confirm-msg {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  word-break: break-word;
+}
+
+/* ---- 看板·走查第四轮(卡上只留执行/完成/撤销;编辑器=详情面板)---- */
+.kanban-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.kanban-editor-head h2 {
+  flex: 1;
+  margin: 0;
+}
+/* 删除键:ghost 底红字,与主操作区隔(margin-left auto 推到最左) */
+.modal-actions .btn.danger-ghost {
+  margin-right: auto;
+  color: var(--danger);
+}

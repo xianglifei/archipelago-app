@@ -836,6 +836,81 @@ export interface TaskWorkdirChip {
   mode: 'worktree' | 'direct'
 }
 
+// ---------- 看板卡片(2026-11-19 看板:卡片与任务会话联动) ----------
+// 卡片 = 未开跑的任务会话预约 + 进度投影:执行体永远是任务会话(不发明第三套执行系统);
+// 四列归属读时推导(持久层只存时间戳事实,不存结论),重启自洽。
+/**
+ * 卡片四列归属(读时推导,不落库):
+ * todo=待办(未执行)/ running=进行中(准备/收尾/回合在跑)/ review=待审阅 / done=已完成
+ */
+export type CardStatus = 'todo' | 'running' | 'review' | 'done'
+
+/** 看板卡片(cards 表行 + 读时聚合的派生态与线程摘要) */
+export interface BoardCard {
+  id: string
+  /** 展示短号(卡-N):建卡分配,单调递增不复用 */
+  seq: number
+  /** 岛主手写标题;空=展示取正文首行(displayTitle 已兜底,全空由渲染端显示「未命名卡片」) */
+  title: string
+  displayTitle: string
+  /** 卡片正文:执行时作为任务会话首条消息(执行过后禁改,历史快照对不上) */
+  body: string
+  /** 指派居民;null=未指派(可先堆待办列,执行前必须指派) */
+  botId: string | null
+  /** 执行体任务会话;null=尚未执行 */
+  threadId: string | null
+  /** 建卡时预选的工作目录(执行时才绑定到线程);null=不绑定(文件落居民自己的工作区) */
+  workdirPath: string | null
+  createdAt: string
+  updatedAt: string
+  lastRunStartedAt: string | null
+  lastRunEndedAt: string | null
+  doneAt: string | null
+  /** 最近执行失败的人话原因(角标展示;重新执行时清空) */
+  error: string | null
+  /** 四列归属(读时推导) */
+  status: CardStatus
+  /** 准备中:线程已建、首条消息未发出(典型=绑定授权卡等待批准) */
+  preparing: boolean
+  /** 收尾中:两段式完成已发收尾提示词、等回合正常结束 */
+  finishing: boolean
+  /** 等你拍板:该线程有挂起的审批卡 */
+  awaiting: boolean
+  /** 线程摘要(打开会话入口用):线程标题(空标题为 null)/ 是否已结束 */
+  threadTitle: string | null
+  threadArchived: boolean
+}
+
+/** 新建/编辑卡的输入(body 与 workdirPath 对已执行过的卡禁改,主进程守卫) */
+export interface CardInput {
+  title: string
+  body: string
+  botId: string | null
+  workdirPath: string | null
+}
+
+/** 执行/完成等动作的结果(ok=false 时 message 为人话原因,渲染端提示) */
+export interface CardActionResult {
+  ok: boolean
+  message: string
+  /** 首次执行后线程已建:渲染端可借此引导进会话(workdir 卡的绑定授权卡在那里等) */
+  threadId?: string
+}
+
+/** 看板偏好(2026-11-19 第二批,meta KV 持久):视图模式/已完成折叠/「完成之后」 */
+export interface CardsPrefs {
+  /** board=四列看板(默认);list=列表视图 */
+  viewMode: 'board' | 'list'
+  /** 看板视图已完成列默认折叠 */
+  doneCollapsed: boolean
+  /** 完成之后(走查拍板 2026-11-19,对齐 dsh「完成之后」):none=直接完成;
+   *  prompt=先发一条收尾提示词、回合正常结束才算完成;smart(默认)=卡片在独立工作树上时
+   *  自动带「合并回基点分支并清理」的收尾指令(dsh mergePrompt 群岛化),不在工作树上就直接完成 */
+  finishMode: 'none' | 'prompt' | 'smart'
+  /** prompt 模式的自定义提示词;null=用默认文案(ui-strings) */
+  finishPrompt: string | null
+}
+
 // ---------- 群岛账号(海域服务,账号系统第一期) ----------
 // 产品口径:一台电脑一座岛——登录只为让积分等权益跨设备可用,岛屿数据永不上云、永不同步。
 
@@ -1073,6 +1148,24 @@ export interface RendererApi {
   taskThreadSetWorkdir(threadId: string, directory: string): Promise<{ ok: boolean; message: string; thread: TaskThreadInfo }>
   /** 结束任务:归档软删(记录保留),进行中回合先停;绑定工作树的线程等收尾握手完成后清理 */
   taskThreadClose(id: string): Promise<TaskThreadInfo>
+  // 看板卡片(2026-11-19 看板:卡片与任务会话联动)
+  /** 看板全量卡片(含读时推导的四列归属与角标) */
+  cardsList(): Promise<BoardCard[]>
+  cardCreate(input: CardInput): Promise<BoardCard>
+  /** 编辑卡;已执行过的卡改 body/workdir 会被主进程拒绝(历史快照对不上) */
+  cardUpdate(id: string, input: CardInput): Promise<BoardCard>
+  /** 删卡只删卡:任务会话与聊天记录保留(P7) */
+  cardDelete(id: string): Promise<void>
+  /** 执行/再执行:同步段(建线程/校验)当场返回;绑定授权/投正文在后台链推进(EV.CardsChanged 通知) */
+  cardRun(id: string): Promise<CardActionResult>
+  /** 完成:两段式(先发收尾提示词,回合正常结束自动落 done);模板空或无线程则直接完成 */
+  cardDone(id: string): Promise<CardActionResult>
+  /** 撤销完成:卡回「待审阅」,线程不动 */
+  cardUndone(id: string): Promise<BoardCard>
+  /** 看板偏好(附 finishPromptDefault 供编辑器展示「默认」态) */
+  cardsPrefsGet(): Promise<CardsPrefs & { finishPromptDefault: string }>
+  /** 改偏好(部分补丁);finishPrompt 传 null=恢复默认 */
+  cardsPrefsSet(patch: Partial<CardsPrefs>): Promise<CardsPrefs>
   /** 多选消息导出 Markdown(2026-11-02):主进程查库拼装;save=保存对话框写文件,copy=返回 md 文本 */
   chatExport(input: ChatExportInput): Promise<ChatExportResult>
   settingsGet(): Promise<SettingsState>

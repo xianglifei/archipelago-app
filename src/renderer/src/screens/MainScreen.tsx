@@ -16,6 +16,7 @@ import ChatView from '../components/ChatView'
 import GroupView from '../components/GroupView'
 import PostView from '../components/PostView'
 import SkillCenter from '../components/SkillCenter'
+import KanbanView from '../components/KanbanView'
 import InviteBotModal from '../components/InviteBotModal'
 import CreateGroupModal from '../components/CreateGroupModal'
 import TaskModal from '../components/TaskModal'
@@ -165,6 +166,16 @@ export default function MainScreen({ initialBoot }: { initialBoot: BootState }) 
         <PostView />
       ) : railView === 'skills' ? (
         <SkillCenter />
+      ) : railView === 'kanban' ? (
+        <KanbanView
+          bots={bots}
+          /* 点卡片打开对应任务会话(与 onFocusBot 同款粘滞逻辑):切回消息视图并选中线程;
+             线程清单由 ThreadsChanged 广播自动刷新(看板执行建线程时已广播) */
+          onOpenTask={(threadId) => {
+            setRailView('messages')
+            switchView({ kind: 'task', threadId })
+          }}
+        />
       ) : (
         <>
           <Sidebar

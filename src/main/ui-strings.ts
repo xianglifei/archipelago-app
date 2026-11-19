@@ -47,7 +47,24 @@ const ZH: Dict = {
   postNotifyBody: '{{name}} 来信了',
   pickMixedTitle: '选择要发给居民的文件或文件夹',
   pickFileTitle: '选择要发给居民的文件',
-  pickFolderTitle: '选择要发给居民的文件夹'
+  pickFolderTitle: '选择要发给居民的文件夹',
+  // 看板(2026-11-19 需求 - 看板):主进程发出的仅四条——收尾提示词默认值(prompt 档)、
+  // 智能「完成之后」的合并收尾指令(smart 档,dsh mergePrompt 群岛化:经岛主点「完成」
+  // 授权才用 git -C 越过工作树操作岛主仓库根)、未命名兜底、回合失败角标文案
+  boardFinishPromptDefault: '请收尾这件事:简述结果、列出交付或产出、说明未尽事项与建议,然后停下。',
+  boardFinishSmartPrompt:
+    '请把「{{title}}」在任务分支上的改动合并回基点分支并收尾(Merge this branch back and clean up):\n' +
+    '- 岛主仓库根:{{repoRoot}}(在你的工作树之外;本次收尾经岛主点「完成」明确授权,可用 git -C {{repoRoot}} 操作)\n' +
+    '- 你的任务分支:{{branch}}(检出:{{worktree}});基点分支:{{base}}(起点 {{baseCommit}})\n' +
+    '\n' +
+    '1. 先把工作树里未提交的改动提交到任务分支;\n' +
+    '2. 用 git -C {{repoRoot}} 确认 {{base}} 已检出、工作区干净;不干净就停下来告诉我,别强合;\n' +
+    '3. git -C {{repoRoot}} merge --no-ff {{branch}};有冲突就停,把冲突文件告诉我,别强推、别 rebase;\n' +
+    '4. 合并成功后跑一下相关的测试或自检;\n' +
+    '5. 清理:git -C {{repoRoot}} worktree remove {{worktree}}(要求工作树干净,失败就说明并停下),再 git -C {{repoRoot}} branch -d {{branch}};最后移除的是你自己的工作目录,之后不必再跑命令;\n' +
+    '6. 用一两句话汇报:合入了哪个分支、合并提交、分支是否已删、未尽事项。',
+  boardCardUntitled: '未命名卡片',
+  boardTurnFailed: '这一轮没有跑成,进会话看原因。'
 }
 
 const EN: Dict = {
@@ -93,7 +110,22 @@ const EN: Dict = {
   postNotifyBody: 'A letter from {{name}}',
   pickMixedTitle: 'Choose files or folders to send',
   pickFileTitle: 'Choose files to send',
-  pickFolderTitle: 'Choose folders to send'
+  pickFolderTitle: 'Choose folders to send',
+  boardFinishPromptDefault:
+    'Please wrap this up: summarize the outcome, list what was delivered, note anything left over, then stop.',
+  boardFinishSmartPrompt:
+    'Please merge the changes of "{{title}}" from its task branch back into the base branch and wrap up (Merge this branch back and clean up):\n' +
+    '- Owner repo root: {{repoRoot}} (outside your worktree; this wrap-up is authorized by the owner clicking done, use git -C {{repoRoot}})\n' +
+    '- Your task branch: {{branch}} (checkout: {{worktree}}); base branch: {{base}} (from {{baseCommit}})\n' +
+    '\n' +
+    '1. Commit any uncommitted changes in your worktree to the task branch;\n' +
+    '2. Use git -C {{repoRoot}} to confirm {{base}} is checked out and clean; if not, stop and tell me, do not force anything;\n' +
+    '3. git -C {{repoRoot}} merge --no-ff {{branch}}; on conflicts stop and list the files, never force-push or rebase;\n' +
+    '4. After merging, run relevant tests or self-checks;\n' +
+    '5. Clean up: git -C {{repoRoot}} worktree remove {{worktree}} (requires a clean worktree; if it fails, stop and explain), then git -C {{repoRoot}} branch -d {{branch}}; this removes your own working directory, no more commands after it;\n' +
+    '6. Report in a sentence or two: which branch it merged into, the merge commit, whether the branch was deleted, anything left over.',
+  boardCardUntitled: 'Untitled card',
+  boardTurnFailed: 'The last turn failed; open the session to see why.'
 }
 
 /** 取当前界面语言的一条主进程文案 */
