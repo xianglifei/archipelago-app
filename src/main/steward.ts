@@ -1,7 +1,7 @@
 import type { Bot, ChatMessage, QuoteMeta, SpaceInfo } from '@shared/types'
 import { findModel } from '@shared/providers'
 import { quoteLines } from '@shared/quote-core'
-import type { LlmMessage } from './llm'
+import type { LlmMessage, ToolSpec } from './llm'
 import { chatOnce, llmContentChars, llmCredentials } from './llm'
 import { cloudModelWindow } from './auth'
 import { listBots } from './bots'
@@ -141,6 +141,45 @@ export function promptTokensBySection(key: string, sections: NamedSection[]): Re
   return out
 }
 
+/** tools 段 token 估算(P1c,方案 - 工具注入缓存稳定性 2026-11-19):tools 走 API tools 参数
+ *  不在 system 消息里,按实际下发的序列化形态(JSON.stringify)过同一校准通道估——
+ *  与提示词段同口径,缓存命中率归因从此有分母 */
+export function toolsTokensFor(key: string, tools: ToolSpec[]): number {
+  return estimateTokensFor(key, JSON.stringify(tools))
+}
+
+/** tokensBySection 追加 tools 键(压缩事件与 turn-usage 并轨):调用方没带工具不添键(口径同「空节省略」) */
+export function withToolsSection(key: string, sections: NamedSection[], tools: ToolSpec[] | undefined): Record<string, number> {
+  const out = promptTokensBySection(key, sections)
+  if (tools && tools.length > 0) out.tools = toolsTokensFor(key, tools)
+  return out
+}
+
+/** 回合用量事件 detail(P1b):prompt 侧取末次请求(对应最终前缀形态与缓存命中),completion 全回合累计 */
+export interface TurnUsageDetail {
+  promptTokens: number
+  /** 缓存命中的 prompt token:端点未回传=null(与命中 0 区分),报表只统计有回传的样本 */
+  cachedPromptTokens: number | null
+  completionTokens: number
+  toolsTokens: number
+  toolsCount: number
+  /** 因 schema 预算装不下的连接器名(mcpToolSpecsFor 的 omitted) */
+  mcpOmitted: string[]
+}
+
+/** 回合用量落库(P1b):每用户回合一行 kind='turn-usage'(工具往返不单独记)——各提供方
+ *  真实缓存命中率与 tools 段体量从此可观测,P3b(工具快照落库)等缓存优化有了决策数据。
+ *  纯观测:落库失败只留痕,绝不打断回合 */
+export function recordTurnUsage(sessionId: string, detail: TurnUsageDetail): void {
+  try {
+    getDb()
+      .prepare("INSERT INTO context_events (session_id, kind, detail, created_at) VALUES (?, 'turn-usage', ?, ?)")
+      .run(sessionId, JSON.stringify(detail), nowIso())
+  } catch (err) {
+    console.error('[steward] turn-usage 事件落库失败:', err)
+  }
+}
+
 const CHECKPOINT_NOTE = '[上下文检查点 · 此前对话的摘要,仅供参考,不要主动复述]'
 export const GROUP_CHECKPOINT_NOTE = '[本群更早对话的摘要,仅供参考,不要主动复述]'
 
@@ -261,8 +300,9 @@ function keepTailFrom<T extends { content: string }>(items: T[], budget: number)
 }
 
 /** 单聊压缩核心:transcript 行带短时间前缀(件 3),摘要要求首行时间范围;
- *  finish_reason=length 的半截摘要拒绝落盘(P2-1),下回合重试 */
-async function summarizeDm(bot: Bot, session: SessionRow, tail: ChatMessage[], keepFrom: number): Promise<boolean> {
+ *  finish_reason=length 的半截摘要拒绝落盘(P2-1),下回合重试。
+ *  tools(P1c):触发回合的工具数组,压缩事件 tokensBySection 据此补 tools 键 */
+async function summarizeDm(bot: Bot, session: SessionRow, tail: ChatMessage[], keepFrom: number, tools?: ToolSpec[]): Promise<boolean> {
   const toSummarize = tail.slice(0, keepFrom)
   if (toSummarize.length < 4) return false // 太少不值得压缩
   const creds = llmCredentials(bot.providerId)
@@ -317,8 +357,9 @@ async function summarizeDm(bot: Bot, session: SessionRow, tail: ChatMessage[], k
         summarized: toSummarize.length,
         cutoff: newCutoff,
         tokensEstimated: true,
-        // 段级 token 快照(FR3):摘要用刚写回的新 summary,反映下回合实际注入的检查点
-        tokensBySection: promptTokensBySection(session.id, dmPromptSections(bot, session, summary))
+        // 段级 token 快照(FR3):摘要用刚写回的新 summary,反映下回合实际注入的检查点;
+        // tools 键(P1c)同快照并轨,触发回合带工具就记
+        tokensBySection: withToolsSection(session.id, dmPromptSections(bot, session, summary), tools)
       }),
       nowIso()
     )
@@ -326,20 +367,20 @@ async function summarizeDm(bot: Bot, session: SessionRow, tail: ChatMessage[], k
 }
 
 /** 一轮结束后调用;超水位线则压缩,返回是否发生了压缩 */
-export async function compactIfNeeded(bot: Bot, session: SessionRow): Promise<boolean> {
+export async function compactIfNeeded(bot: Bot, session: SessionRow, tools?: ToolSpec[]): Promise<boolean> {
   const usable = contextWindowOf(bot) - REPLY_RESERVE
   const watermark = watermarkForTests ?? usable * 0.8
 
   const tail = dmTail(session)
   if (contextTokens(session.id, bot, getSpace(), session, tail) < watermark) return false
-  return summarizeDm(bot, session, tail, keepTailFrom(tail, KEEP_TAIL_BUDGET))
+  return summarizeDm(bot, session, tail, keepTailFrom(tail, KEEP_TAIL_BUDGET), tools)
 }
 
 /** 超长兜底(B3):模型侧拒了超长请求后同步强制压缩(不看水位线,尾部预算更小)。
  *  已无可压缩的早期消息时返回 false,由调用方给用户明确文案 */
-export async function forceCompact(bot: Bot, session: SessionRow): Promise<boolean> {
+export async function forceCompact(bot: Bot, session: SessionRow, tools?: ToolSpec[]): Promise<boolean> {
   const tail = dmTail(session)
-  return summarizeDm(bot, session, tail, keepTailFrom(tail, FORCE_KEEP_BUDGET))
+  return summarizeDm(bot, session, tail, keepTailFrom(tail, FORCE_KEEP_BUDGET), tools)
 }
 
 // ---- 群聊压缩检查点(A1):摘要每群一份、全体成员共用,存 groups 表 ----
@@ -382,7 +423,8 @@ async function summarizeGroup(
   groupId: string,
   tail: GroupMsgRow[],
   keepFrom: number,
-  start: { summary: string | null; cutoffId: number | null }
+  start: { summary: string | null; cutoffId: number | null },
+  tools?: ToolSpec[]
 ): Promise<boolean> {
   const toSummarize = tail.slice(0, keepFrom)
   if (toSummarize.length < 4) return false
@@ -428,7 +470,7 @@ async function summarizeGroup(
       JSON.stringify({
         summarized: toSummarize.length,
         cutoff: newCutoff,
-        tokensBySection: promptTokensBySection(`group:${groupId}`, groupPromptSections(bot, groupId))
+        tokensBySection: withToolsSection(`group:${groupId}`, groupPromptSections(bot, groupId), tools)
       }),
       nowIso()
     )
@@ -436,7 +478,7 @@ async function summarizeGroup(
 }
 
 /** 群聊成员回合结束后异步压缩:条数超过窗口余量触发(主),token 水位兜底(次) */
-export async function compactGroupIfNeeded(bot: Bot, groupId: string): Promise<boolean> {
+export async function compactGroupIfNeeded(bot: Bot, groupId: string, tools?: ToolSpec[]): Promise<boolean> {
   const start = groupSummaryRow(groupId) // 快照 cutoff,作条件写回的守卫
   const tail = groupTailMessages(groupId)
   const byCount = tail.length > GROUP_WINDOW
@@ -445,14 +487,14 @@ export async function compactGroupIfNeeded(bot: Bot, groupId: string): Promise<b
     (watermarkForTests ?? (contextWindowOf(bot) - REPLY_RESERVE) * 0.8)
   if (!byCount && !byTokens) return false
   const keepFrom = byCount ? Math.max(0, tail.length - GROUP_COMPACT_KEEP) : keepTailFrom(tail, KEEP_TAIL_BUDGET)
-  return summarizeGroup(bot, groupId, tail, keepFrom, start)
+  return summarizeGroup(bot, groupId, tail, keepFrom, start, tools)
 }
 
 /** 群聊超长兜底(B3):压缩后仍超长时,转写再降到降窗条数 */
-export async function forceCompactGroup(bot: Bot, groupId: string): Promise<boolean> {
+export async function forceCompactGroup(bot: Bot, groupId: string, tools?: ToolSpec[]): Promise<boolean> {
   const start = groupSummaryRow(groupId) // 快照 cutoff,作条件写回的守卫
   const tail = groupTailMessages(groupId)
-  return summarizeGroup(bot, groupId, tail, keepTailFrom(tail, FORCE_KEEP_BUDGET), start)
+  return summarizeGroup(bot, groupId, tail, keepTailFrom(tail, FORCE_KEEP_BUDGET), start, tools)
 }
 
 export const GROUP_TURN_WINDOW = GROUP_WINDOW

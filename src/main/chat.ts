@@ -25,9 +25,9 @@ import { getSpace } from './space'
 import { resolveBotPath } from './fs-tools'
 import { finishToolEvent, getOrCreateSession, getOrCreateTaskSession, insertMessage, listMessages, type SessionRow } from './sessions'
 import { getDb, metaGet, metaSet, nowIso } from './store'
-import { buildContextMessages, compactIfNeeded, forceCompact, recordPromptUsage } from './steward'
+import { buildContextMessages, compactIfNeeded, forceCompact, recordPromptUsage, recordTurnUsage, toolsTokensFor } from './steward'
 import { clearTurnApprovals } from './approval'
-import { executeTool, toolsFor } from './tools'
+import { executeTool, toolsBundleFor, type ToolBundle } from './tools'
 import { getTaskThread, TASK_THREAD_BRIEF, taskWorkdirBriefOf, tryGenerateTaskThreadTitle, type TaskExecBase } from './task-threads'
 import { ensureWorkdirReady, finalizeTaskTurn } from './task-workdir'
 import { mcpToolEventKey, warmMcpToolsForBot } from './mcp'
@@ -749,15 +749,35 @@ export interface ToolLoopOptions {
   taskTurn?: boolean
 }
 
+/** 回合用量汇总(P1b,方案 - 工具注入缓存稳定性 2026-11-19):prompt 侧取末次请求——
+ *  它对应最终前缀形态与缓存命中;completion 为全回合累计(各步输出成本)。无任何一步
+ *  回传 usage(部分端点)则为 null,调用方据此跳过 turn-usage 事件 */
+export interface TurnUsageSummary {
+  promptTokens: number
+  cachedPromptTokens: number | null
+  completionTokens: number
+}
+
 /** 通用 agent 循环:模型 → 工具 → 模型;不落库、不发事件,由调用方(DM/群聊)包装。
  *  text 语义=最后完成一步的正文(2026-10-28 拍板修订):带工具调用的中间步正文是过程旁白,
  *  单聊落 kind='note' 过程行折进时间线(群聊直接不落),不再拼接进最终回复 */
 export async function runToolLoop(
   bot: Bot,
   opts: ToolLoopOptions
-): Promise<{ ok: boolean; text: string; reasoning: string; aborted: boolean; error?: Error; processRows: number }> {
+): Promise<{ ok: boolean; text: string; reasoning: string; aborted: boolean; error?: Error; processRows: number; usage: TurnUsageSummary | null }> {
   let text = ''
   let reasoning = ''
+  let lastUsage: UsageInfo | null = null
+  let completionTotal = 0
+  // 回合用量出栈口径(P1b):prompt 侧末次请求、completion 累计,成对出现在两个返回点
+  const usageOf = (): TurnUsageSummary | null =>
+    lastUsage
+      ? {
+          promptTokens: lastUsage.promptTokens,
+          cachedPromptTokens: lastUsage.cachedPromptTokens,
+          completionTokens: completionTotal
+        }
+      : null
   // 步数用尽时给用户一句可见的收尾(不再多花一轮模型调用)
   let exhausted = false
   // 本回合落了几条过程行(思考+工具):无正文的静默回信靠它判断要不要落「无回复」标记
@@ -805,11 +825,16 @@ export async function runToolLoop(
       )
       // 真实用量回传(B2):以本次请求的上下文字符数换算 chars/token 比率
       // A(2026-11-06):回传的 reasoning_content 同样进 prompt,字符数一并计入,比率不漂移
-      if (result.usage && opts.onUsage) {
-        opts.onUsage(
-          opts.context.reduce((sum, m) => sum + llmContentChars(m.content) + (m.reasoning_content?.length ?? 0), 0),
-          result.usage
-        )
+      if (result.usage) {
+        // 回合用量累计(P1b):末次请求的 prompt 侧为准,completion 全回合累计——随返回值带给调用方落 turn-usage
+        lastUsage = result.usage
+        completionTotal += result.usage.completionTokens
+        if (opts.onUsage) {
+          opts.onUsage(
+            opts.context.reduce((sum, m) => sum + llmContentChars(m.content) + (m.reasoning_content?.length ?? 0), 0),
+            result.usage
+          )
+        }
       }
       // 末步正文语义(2026-10-28 拍板修订):text 只保留最近完成步的正文——正常收尾它就是结论;
       // 出错/中止时它是「已产出的部分」,与旧版「全部拼接」不同,中间步文字已各自落 note 行
@@ -919,7 +944,7 @@ export async function runToolLoop(
       // 任务回合换任务口径:无人值守场景没人能「跟我说一声」,指路事后回「继续」续跑(2026-11-03 拍板)
       text += opts.taskTurn ? EXHAUST_SUFFIX_TASK : EXHAUST_SUFFIX_CHAT
     }
-    return { ok: true, text, reasoning, aborted: false, processRows }
+    return { ok: true, text, reasoning, aborted: false, processRows, usage: usageOf() }
   } catch (err) {
     // 中断落在流式正文中途:已流出的部分就是最新产出,照「出错/停止保留已流出部分」的口径带回
     if (streamed) text = streamed
@@ -930,7 +955,8 @@ export async function runToolLoop(
       reasoning,
       aborted: opts.signal.aborted,
       error: err instanceof Error ? err : new Error(String(err)),
-      processRows
+      processRows,
+      usage: usageOf()
     }
   }
 }
@@ -1032,6 +1058,8 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
   broadcastTurnChanged()
   let session!: SessionRow
   let result!: Awaited<ReturnType<typeof runToolLoop>>
+  // try 内暖连接后装配,回合收尾的 turn-usage 事件要用——正常走到 try 外必已赋值(早退都在 try 内)
+  let toolBundle!: ToolBundle
   // 执行基点提升到 try 外(2026-11-10):finalize 要用回合捕获的基点做退役工作树保护(M6)
   let execBase: TaskExecBase | null = null
   try {
@@ -1094,16 +1122,19 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
         }
       }
     }
-    // MCP 连接器(2026-11-06):回合开始前暖连接+刷新工具缓存——toolsFor 是同步读缓存,
+    // MCP 连接器(2026-11-06):回合开始前暖连接+刷新工具缓存——toolsBundleFor 是同步读缓存,
     // 冷启动必须在这里预热;无分配=一次索引查询直通,失败吞进连接器状态绝不打断回合
     await warmMcpToolsForBot(bot.id)
+    // 工具装配一次成包(P1b):整回合含图片降级/压缩重建等重试复用同一数组——重建只动
+    // messages 尾部,tools 序列化逐字节稳定,缓存前缀不被打穿;mcpOmitted 随包带出供 turn-usage
+    toolBundle = toolsBundleFor(bot, opts.depth, opts.thread ? 'task' : 'dm', execBase?.root)
     const runLoop = (ctx: LlmMessage[]) =>
       runToolLoop(bot, {
         provider: effectiveProvider,
         apiKey,
         headers: islandUid ? { 'x-island-uid': islandUid } : undefined,
         context: ctx,
-        tools: toolsFor(bot, opts.depth, opts.thread ? 'task' : 'dm', execBase?.root),
+        tools: toolBundle.tools,
         depth: opts.depth,
         signal: controller.signal,
         // 单聊回合(含处理居民私信的静默回合)都落工具事件行:岛主盯着谁的窗口都能看到 TA 在动本机
@@ -1142,7 +1173,7 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
     // 超长兜底(B3):模型侧拒了超长请求且没有产出时,同步强制压缩后重试一次(每回合至多一次);
     // forceCompact 改了 sessions 的 summary/cutoff,重建上下文前必须重取会话行;任务框定语随重建补挂
     if (!result.ok && !result.text.trim() && result.error instanceof ContextTooLongError) {
-      const compacted = await forceCompact(bot, session).catch((err) => {
+      const compacted = await forceCompact(bot, session, toolBundle.tools).catch((err) => {
         console.error('[steward] 超长强制压缩失败:', err)
         return false
       })
@@ -1169,6 +1200,20 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
     broadcastTurnChanged()
     // 回合结束,「本回合不再问」的免问表随之失效(键=线程:只清本线程的,并行线程的免问不受牵连)
     clearTurnApprovals(turnKey)
+  }
+
+  // 缓存观测(P1b,方案 - 工具注入缓存稳定性 2026-11-19):每用户回合一行 turn-usage,
+  // 覆盖成功/出错/停止所有收尾路径(try 内抛错则整回合无 result,不落也合理);
+  // tools 段 token 与压缩事件 tokensBySection 走同一校准通道
+  if (result.usage) {
+    recordTurnUsage(session.id, {
+      promptTokens: result.usage.promptTokens,
+      cachedPromptTokens: result.usage.cachedPromptTokens,
+      completionTokens: result.usage.completionTokens,
+      toolsTokens: toolsTokensFor(session.id, toolBundle.tools),
+      toolsCount: toolBundle.tools.length,
+      mcpOmitted: toolBundle.mcpOmitted
+    })
   }
 
   const isRelationTurn = opts.relation !== undefined
@@ -1242,7 +1287,7 @@ async function runTurnInner(bot: Bot, opts: TurnOptions): Promise<{ ok: boolean;
       }
     }
     if (opts.task) opts.task.onSettled({ ok: true })
-    void compactIfNeeded(bot, session).catch((err) => {
+    void compactIfNeeded(bot, session, toolBundle.tools).catch((err) => {
       console.error('[steward] 压缩失败:', err)
     })
     return { ok: true, content: result.text }

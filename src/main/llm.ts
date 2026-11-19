@@ -103,6 +103,10 @@ export interface UsageInfo {
   promptTokens: number
   completionTokens: number
   totalTokens: number
+  /** 缓存命中的 prompt token(P1a,方案 - 工具注入缓存稳定性 2026-11-19):
+   *  OpenAI 形 usage.prompt_tokens_details.cached_tokens 或 DeepSeek 形 usage.prompt_cache_hit_tokens;
+   *  端点未回传=null——明确区分「未知」与「命中 0」,观测报表只统计有回传的样本 */
+  cachedPromptTokens: number | null
 }
 
 export interface ChatResult {
@@ -197,7 +201,7 @@ interface StreamDelta {
     }
     finish_reason?: string | null
   }[]
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+  usage?: UsageRaw
 }
 
 interface NonStreamMessage {
@@ -209,15 +213,32 @@ interface NonStreamMessage {
     }
     finish_reason?: string | null
   }[]
-  usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }
+  usage?: UsageRaw
 }
 
-function toUsage(raw: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined): UsageInfo | null {
+/** usage 原始形态(P1a):缓存命中字段两派并存——OpenAI 系(含 GLM)走
+ *  prompt_tokens_details.cached_tokens,DeepSeek 走顶层 prompt_cache_hit_tokens,取到即记 */
+interface UsageRaw {
+  prompt_tokens?: number
+  completion_tokens?: number
+  total_tokens?: number
+  prompt_cache_hit_tokens?: number
+  prompt_tokens_details?: { cached_tokens?: number }
+}
+
+export function toUsage(raw: UsageRaw | undefined): UsageInfo | null {
   if (!raw || typeof raw.total_tokens !== 'number') return null
+  const cachedPromptTokens =
+    typeof raw.prompt_tokens_details?.cached_tokens === 'number'
+      ? raw.prompt_tokens_details.cached_tokens
+      : typeof raw.prompt_cache_hit_tokens === 'number'
+        ? raw.prompt_cache_hit_tokens
+        : null
   return {
     promptTokens: raw.prompt_tokens ?? 0,
     completionTokens: raw.completion_tokens ?? 0,
-    totalTokens: raw.total_tokens
+    totalTokens: raw.total_tokens,
+    cachedPromptTokens
   }
 }
 

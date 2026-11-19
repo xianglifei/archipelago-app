@@ -48,11 +48,13 @@ import {
   GROUP_TURN_CLIP_CHARS,
   GROUP_TURN_RECENT_FULL,
   GROUP_TURN_WINDOW,
-  recordPromptUsage
+  recordPromptUsage,
+  recordTurnUsage,
+  toolsTokensFor
 } from './steward'
 import { getDb, nowIso } from './store'
 import { getSpace } from './space'
-import { toolsFor } from './tools'
+import { toolsBundleFor } from './tools'
 
 // 群聊(M5):值守模式(默认管理员应答)、@点名传棒、[PASS]、顺序队列(5.7)
 // 每条群消息按到达顺序串行处理;成员回合与单聊共用 runToolLoop(可用工具与记忆)
@@ -504,16 +506,18 @@ async function runGroupTurn(
   const controller = new AbortController()
   groupActive.set(key, controller)
   broadcastTurnChanged()
-  // MCP 连接器暖连接(与单聊 chat.ts 同款):toolsFor 是同步读缓存,冷启动后直接进群聊,
+  // MCP 连接器暖连接(与单聊 chat.ts 同款):toolsBundleFor 是同步读缓存,冷启动后直接进群聊,
   // 居民的连接器工具要等到某次单聊碰巧建连才会出现——回合开始前先暖一次
   await warmMcpToolsForBot(bot.id)
+  // 工具装配一次成包(P1b,与单聊同款):整回合含降级重试复用同一数组,tools 序列化稳定保缓存前缀
+  const toolBundle = toolsBundleFor(bot, 0, 'group')
   const runLoop = (ctx: LlmMessage[]) =>
     runToolLoop(bot, {
       provider: effectiveProvider,
       apiKey,
       headers: islandUid ? { 'x-island-uid': islandUid } : undefined,
       context: ctx,
-      tools: toolsFor(bot, 0, 'group'),
+      tools: toolBundle.tools,
       depth: 0,
       signal: controller.signal,
       // 群聊场景标识(2026-10-29 定时任务):群里交代的任务登记时记来源群,执行仍在单聊
@@ -543,8 +547,19 @@ async function runGroupTurn(
   }
   // 超长兜底(B3):强制群压缩(压不动就算了)后降到降窗条数重试一次
   if (!result.ok && !result.text.trim() && result.error instanceof ContextTooLongError) {
-    await forceCompactGroup(bot, group.id).catch(() => false)
+    await forceCompactGroup(bot, group.id, toolBundle.tools).catch(() => false)
     result = await runLoop(buildGroupTurnContext(bot, group, roster, space, GROUP_RETRY_WINDOW))
+  }
+  // 缓存观测(P1b,与单聊同款):每群回合一行 turn-usage,session_id 沿 group-compact 约定塞群 id
+  if (result.usage) {
+    recordTurnUsage(group.id, {
+      promptTokens: result.usage.promptTokens,
+      cachedPromptTokens: result.usage.cachedPromptTokens,
+      completionTokens: result.usage.completionTokens,
+      toolsTokens: toolsTokensFor(`group:${group.id}`, toolBundle.tools),
+      toolsCount: toolBundle.tools.length,
+      mcpOmitted: toolBundle.mcpOmitted
+    })
   }
   groupActive.delete(key)
   broadcastTurnChanged()
@@ -569,7 +584,7 @@ async function runGroupTurn(
       .join('\n')
     void reviewGroupTurn(bot, transcript).catch(() => undefined)
     // 群聊压缩检查点(A1):条数超窗后异步把早期群聊压成每群一份的摘要
-    void compactGroupIfNeeded(bot, group.id).catch((err) => {
+    void compactGroupIfNeeded(bot, group.id, toolBundle.tools).catch((err) => {
       console.error('[steward] 群聊压缩失败:', err)
     })
   } else if (result.ok) {

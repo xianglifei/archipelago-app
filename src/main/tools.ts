@@ -710,7 +710,9 @@ function buildRunCommandSpec(): BotToolSpec {
     type: 'function',
     function: {
       name: 'run_command',
-      description: `${lead}。workdir 默认你的工作区;默认超时 120 秒(最长 600 秒)。写工作区外的路径、危险命令(rm -rf、sudo、git push、覆盖性重定向等)会弹出审批卡,岛主批准后才会执行。`,
+      // 档位中性(P2,方案 - 工具注入缓存稳定性 2026-11-19 拍板):审批行为的话术不再随权限档分叉,
+      // 指向 S2 的权限档位行(两档语义在那里单源维护)——切档时 tools 数组逐字节不变,不打穿缓存前缀
+      description: `${lead}。workdir 默认你的工作区;默认超时 120 秒(最长 600 秒)。写工作区外的路径、危险命令(rm -rf、sudo、git push、覆盖性重定向等)是否需要审批,以系统提示中的当前权限档位为准。`,
       parameters: {
         type: 'object',
         properties: {
@@ -724,20 +726,9 @@ function buildRunCommandSpec(): BotToolSpec {
   }
 }
 
-/** 全自动档的话术(2026-10-27):描述与实际行为一致,防模型向岛主转述「会弹审批卡」的错误预期 */
-function buildRunCommandAutoSpec(): BotToolSpec {
-  const base = buildRunCommandSpec()
-  return {
-    ...base,
-    function: {
-      ...base.function,
-      description: `${runCommandLead()}。workdir 默认你的工作区;默认超时 120 秒(最长 600 秒)。你的档位是全自动:包括危险命令在内都会直接执行,不会弹审批卡,放心认真做事。`
-    }
-  }
-}
-
 /** depth = 0 是与岛主的正常回合;depth > 0 是在处理其他居民的私信(不允许再转发,防死锁)
- *  权限两档(2026-10-27):工具全员下发(只读档已砍);全自动档 run_command 话术换成「直接执行」版;
+ *  权限两档(2026-10-27;P2 2026-11-19 修订):工具全员下发(只读档已砍);run_command 话术档位
+ *  中性,两档共用同一份描述,审批语义归 S2——切档不再改变 tools 数组;
  *  post_to_group(件 4)全深度下发:通报消化回合(depth>0)也能上墙汇报——消化者不能再发
  *  私信(DM 链结构性终止于第二跳),上墙是异步协作的结果出口 */
 /** 工具注入的会话场景(2026-11-06「新建任务」):
@@ -764,7 +755,16 @@ function rebaseToolDescriptions(tools: ToolSpec[], root: string): ToolSpec[] {
   )
 }
 
-export function toolsFor(bot: Bot, depth: number, scene: ToolScene = 'dm', taskRoot?: string): ToolSpec[] {
+/** 每回合工具装配的完整产出(P1b,方案 - 工具注入缓存稳定性 2026-11-19):tools 之外把
+ *  因 schema 预算装不下的连接器名一并带出,turn-usage 观测事件要用 */
+export interface ToolBundle {
+  tools: ToolSpec[]
+  mcpOmitted: string[]
+}
+
+/** 工具装配主实现:调用方(DM/群聊)整回合取一次、重建尝试复用同一数组——tools 序列化
+ *  逐字节稳定是缓存前缀的契约;权限档不再分叉 run_command 话术(P2),切档不打穿前缀 */
+export function toolsBundleFor(bot: Bot, depth: number, scene: ToolScene = 'dm', taskRoot?: string): ToolBundle {
   const tools: ToolSpec[] = [
     READ_OWN_CHAT,
     READ_MY_PROFILE,
@@ -778,7 +778,7 @@ export function toolsFor(bot: Bot, depth: number, scene: ToolScene = 'dm', taskR
     INVITE_RESIDENT,
     UPDATE_RESIDENT
   ]
-  tools.push(WRITE_FILE, EDIT_FILE, bot.permission === 'auto' ? buildRunCommandAutoSpec() : buildRunCommandSpec())
+  tools.push(WRITE_FILE, EDIT_FILE, buildRunCommandSpec())
   tools.push(POST_TO_GROUP)
   // 技能四工具仅 depth 0(与建群/解散同门):深层派工链里不许记卡/改卡/装卸,防嵌套环;
   // 定时任务四工具同门(群聊回合 depth 0 可登记,私信链 >0 不许再派定时任务);
@@ -808,9 +808,16 @@ export function toolsFor(bot: Bot, depth: number, scene: ToolScene = 'dm', taskR
   if (scene === 'task') tools.push(RENAME_TASK, SET_TASK_WORKDIR)
   // MCP 连接器(2026-11-06):已分配连接器的动态工具追加在静态工具之后;
   // 纯同步读运行时缓存(暖连接在 runTurn 回合开始前做),没连上的服务本轮不注入
-  tools.push(...mcpToolSpecsFor(bot).specs)
+  const mcp = mcpToolSpecsFor(bot)
+  tools.push(...mcp.specs)
   // 执行基点(2026-11-10):绑定工作目录的任务回合,文件/命令工具描述里的基点措辞同步切换
-  return taskRoot ? rebaseToolDescriptions(tools, taskRoot) : tools
+  const finalTools = taskRoot ? rebaseToolDescriptions(tools, taskRoot) : tools
+  return { tools: finalTools, mcpOmitted: mcp.omitted }
+}
+
+/** 兼容薄壳(P1b 之前的老签名):只需要 tools 数组的调用方与既有测试用 */
+export function toolsFor(bot: Bot, depth: number, scene: ToolScene = 'dm', taskRoot?: string): ToolSpec[] {
+  return toolsBundleFor(bot, depth, scene, taskRoot).tools
 }
 
 // 技能目录(档案「技能」页签):展示名与一句话说明。Record<ToolId> 全集强制——
