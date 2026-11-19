@@ -4,6 +4,7 @@ import os from 'node:os'
 import path from 'node:path'
 import readline from 'node:readline'
 import type { Bot, BotFileEntry } from '@shared/types'
+import { DENIED_BYPASS_LINE } from './approval-lines'
 import { requestApproval, type ApprovalScope } from './approval'
 import { audit } from './audit'
 import { getDb } from './store'
@@ -150,7 +151,7 @@ async function ensureWritable(
   )
   if (decision === 'approved') return null
   if (decision === 'aborted') return '本次回合已停止,写入未执行。'
-  return `岛主拒绝了这次工作区外写入(${absPath})。可以改写到你的工作区内;若确有需要,请岛主在居民档案里调整权限档位。`
+  return `岛主拒绝了这次工作区外写入(${absPath})。可以改写到你的工作区内;${DENIED_BYPASS_LINE}`
 }
 
 /**

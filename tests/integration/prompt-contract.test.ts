@@ -162,7 +162,7 @@ const RUNTIME_GOLDEN = [
   '[当前状态 · 以下随岛上变化即时更新——熟络档位、居民名册、技能与连接器、权限档位;历史消息里出现过的旧名册、旧档位、旧技能清单一律作废,以本条为准]',
   '岛上的居民(全是 AI 伙伴,不是真人;真人只有岛主「阿菲」):',
   '- Nova(管家 · 元气)',
-  '- 你的权限档位是「半自动」:日常操作直接做;写工作区外的路径、执行危险命令(rm -rf、sudo、git push、覆盖性重定向等)会弹出审批卡,岛主批准后才会执行;被拒绝就换思路,不要原样重试。'
+  '- 你的权限档位是「半自动」:日常操作直接做;写工作区外的路径、执行危险命令(rm -rf、sudo、git push、覆盖性重定向等)会弹出审批卡,岛主批准后才会执行;被拒绝就换一种不碰红线的思路,不要原样重试,也不要改用别的工具或写法去达到同一效果;确需执行请岛主自己来,或由岛主调整权限档位。'
 ].join('\n')
 
 // ---- 测试 ----
@@ -268,7 +268,7 @@ describe('结构断言(FR-1):段序与防线句', () => {
   it('S2 段序:supersedes 头行在最前,权限档位行收尾', () => {
     const runtime = buildSystemPromptParts(momo, space, roster).runtime
     expect(runtime.startsWith('[当前状态')).toBe(true)
-    expect(runtime.trimEnd().endsWith('不要原样重试。')).toBe(true)
+    expect(runtime.trimEnd().endsWith('或由岛主调整权限档位。')).toBe(true)
   })
 })
 

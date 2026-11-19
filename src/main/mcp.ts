@@ -4,6 +4,7 @@ import type { ToolSpec } from './llm'
 import { getDb, nowIso } from './store'
 import { audit } from './audit'
 import { getBot } from './bots'
+import { DENIED_BYPASS_LINE } from './approval-lines'
 import { requestApproval } from './approval'
 import { officialResolve } from './official-catalog'
 import {
@@ -297,7 +298,8 @@ export interface McpSpecsResult {
 }
 
 /** 某居民的 MCP 工具 schema:已分配且 active 的连接器,取运行时工具缓存转译。
- *  没连上(缓存空)的服务本轮不注入——warmMcpToolsForBot 在回合开始前负责暖连接 */
+ *  没连上但留有 last-known-good 清单的服务照常注入(P3a 2026-11-19,以实际调用报错为准);
+ *  真正没清单的(从未连上/已 invalidate)本轮不注入——warmMcpToolsForBot 在回合开始前负责暖连接 */
 export function mcpToolSpecsFor(bot: Bot): McpSpecsResult {
   const conns = installedConnectorRows(bot.id)
   if (conns.length === 0) return { specs: [], omitted: [] }
@@ -429,7 +431,7 @@ export async function callMcpToolWithApproval(
   if (decision === 'aborted') return '本次回合已停止,调用未执行。'
   if (decision === 'denied') {
     audit(caller.id, 'mcp_tool.denied', { connector: conn.name, tool: binding.tool })
-    return `岛主没有同意这次对「${conn.name}」的调用。别原样重试;可以先问岛主怎么做。`
+    return `岛主没有同意这次对「${conn.name}」的调用。${DENIED_BYPASS_LINE}拿不准就先问岛主。`
   }
   // 审批等待期间岛主可能已停用/删除连接器或撤了安装:批准后重验,失效不执行
   // (绑定的归属也重验一次——等待期间调用者可能恰好卸了它)

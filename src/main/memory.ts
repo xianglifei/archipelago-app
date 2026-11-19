@@ -7,6 +7,7 @@ import { EV } from '@shared/ipc-channels'
 import { listBots } from './bots'
 import { chatOnce, llmCredentials } from './llm'
 import { getSpace } from './space'
+import { metaGet, metaSet } from './store'
 
 // 记忆(M6):Markdown 文件,双作用域(每 Bot 私有 + 集体记忆)+ 岛主档案(M6.11,JSON)
 // 被动整理(6.2):每轮 DM / 群聊回合结束后由独立的 memory review 判断该记什么(群聊同样只记岛主亲口说的)
@@ -65,9 +66,64 @@ export function addMemory(scope: string, text: string): MemoryState {
     if (!entries.some((e) => e.text === trimmed)) {
       entries.push({ date: today(), text: trimmed })
       writeScope(scope, entries)
+      markCurationDirty(scope)
     }
   }
   return listMemory()
+}
+
+// ---- 夜间记忆整理(2026-11-19,借 Linger)的脏标记与文件助手 ----
+// 脏标记:自上次整理后有新条目写入的 scope 集合,存 meta KV;夜间作业只碰脏 scope,
+// 干净的零成本跳过。标记在 memory.ts(写入方)而不是 memory-curation.ts(消费方),避免循环依赖。
+
+const DIRTY_KEY = 'memory.curation.dirty'
+
+function curationDirtyScopes(): string[] {
+  try {
+    const raw = metaGet<string>(DIRTY_KEY)
+    return raw ? (JSON.parse(raw) as string[]) : []
+  } catch {
+    return [] // 坏值当空集,下次写入自然修复
+  }
+}
+
+function markCurationDirty(scope: string): void {
+  const scopes = curationDirtyScopes()
+  if (!scopes.includes(scope)) metaSet(DIRTY_KEY, JSON.stringify([...scopes, scope]))
+}
+
+/** 整理作业消费:取走当前脏 scope 集(不清理,清理由作业按 scope 回调) */
+export function curationDirty(): string[] {
+  return curationDirtyScopes()
+}
+
+/** 整理作业消费:某 scope 整理完成(或确认无事可做),移出脏集 */
+export function curationClearDirty(scope: string): void {
+  const scopes = curationDirtyScopes().filter((s) => s !== scope)
+  metaSet(DIRTY_KEY, JSON.stringify(scopes))
+}
+
+/** 整理作业读取某 scope 的条目(带行号,与记忆页同款口径) */
+export function curationRead(scope: string): MemoryEntry[] {
+  return toApi(readScope(scope))
+}
+
+/** 整理作业写回整理后的条目集(整文件重写,与 writeScope 同一通道) */
+export function curationWrite(scope: string, entries: { date: string; text: string }[]): void {
+  writeScope(scope, entries)
+}
+
+/** 整理作业归档:被合并/替换/剔除的旧条目追加进 {scope}.history.md(程序写,模型不写) */
+export function curationArchive(scope: string, archives: { entry: MemoryEntry; action: string; reason?: string }[]): void {
+  if (archives.length === 0) return
+  fs.mkdirSync(memoryDir(), { recursive: true })
+  const file = path.join(memoryDir(), `${scope === 'shared' ? 'shared' : scope}.history.md`)
+  const stamp = today()
+  const lines = archives.map((a) => {
+    const why = a.reason ? `(${a.reason})` : ''
+    return `- [${stamp}] ${a.entry.text} → ${a.action === 'reject' ? '剔除' : a.action === 'merge' ? '并入合并' : '改写替换'}${why}`
+  })
+  fs.appendFileSync(file, `${lines.join('\n')}\n`)
 }
 
 export function deleteMemory(scope: string, line: number): MemoryState {

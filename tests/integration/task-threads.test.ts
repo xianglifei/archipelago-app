@@ -607,6 +607,8 @@ describe('任务会话:文件/命令审批落点(codex P2)', () => {
     resolveApproval(pendingApprovalOf(taskSession)!.approvalId, 'deny')
     const result = await pending
     expect(result).toContain('拒绝了这次工作区外写入')
+    // 防绕过协议(2026-11-19):拒绝回执必须带上「不得换工具/写法达到同一效果」尾句
+    expect(result).toContain('不要改用别的工具、脚本或写法去达到同一效果')
     // 拒绝后没有产生任何文件写入副作用
     expect(pendingApprovalOf(taskSession)).toBeNull()
   })

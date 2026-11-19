@@ -911,6 +911,12 @@ export interface CardsPrefs {
   finishPrompt: string | null
 }
 
+/** 记忆偏好(2026-11-19 Linger 借鉴批次③,meta KV 持久):夜间受校验整理的开关 */
+export interface MemoryPrefs {
+  /** 每日 00:30 对有新写入的记忆做一次受校验整理(合并/改写/剔除,旧条目归档留痕);缺省开 */
+  curationEnabled: boolean
+}
+
 // ---------- 群岛账号(海域服务,账号系统第一期) ----------
 // 产品口径:一台电脑一座岛——登录只为让积分等权益跨设备可用,岛屿数据永不上云、永不同步。
 
@@ -1166,6 +1172,10 @@ export interface RendererApi {
   cardsPrefsGet(): Promise<CardsPrefs & { finishPromptDefault: string }>
   /** 改偏好(部分补丁);finishPrompt 传 null=恢复默认 */
   cardsPrefsSet(patch: Partial<CardsPrefs>): Promise<CardsPrefs>
+  /** 记忆偏好:夜间受校验整理开关 */
+  memoryPrefsGet(): Promise<MemoryPrefs>
+  /** 改记忆偏好(部分补丁) */
+  memoryPrefsSet(patch: Partial<MemoryPrefs>): Promise<MemoryPrefs>
   /** 多选消息导出 Markdown(2026-11-02):主进程查库拼装;save=保存对话框写文件,copy=返回 md 文本 */
   chatExport(input: ChatExportInput): Promise<ChatExportResult>
   settingsGet(): Promise<SettingsState>

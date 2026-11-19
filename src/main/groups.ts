@@ -401,8 +401,6 @@ function buildGroupTurnContext(
     { role: 'system', content: parts.runtime },
     { role: 'system', content: parts.group }
   ]
-  const memory = memoryNote(bot.id)
-  if (memory) context.push({ role: 'system', content: memory })
   const { summary, cutoffId } = groupSummaryRow(group.id)
   if (summary && (cutoffId ?? 0) > 0) {
     context.push({ role: 'system', content: `${GROUP_CHECKPOINT_NOTE}\n${summary}` })
@@ -438,6 +436,10 @@ function buildGroupTurnContext(
     }
     prev = m
   }
+  // 记忆挂消息侧(2026-11-19,与单聊 buildContextMessages 同调):每回合可能变的记忆
+  // 挪到群转写之后、时间行同区,记忆写入不再打穿群历史的 provider 缓存前缀
+  const memory = memoryNote(bot.id)
+  if (memory) context.push({ role: 'system', content: memory })
   context.push({ role: 'user', content: currentTimeLine() })
   return context
 }

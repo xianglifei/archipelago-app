@@ -41,7 +41,9 @@ const {
 } = await import('../../src/main/mcp')
 const { closeAllMcp, invalidateMcpConnector } = await import('../../src/main/mcp-manager')
 
-/** 进程内假 MCP 服务器:echo 正常回显 / boom 业务报错;每次调用产新链路对(重连可复用) */
+/** 进程内假 MCP 服务器:echo 正常回显 / boom 业务报错;每次调用产新链路对(重连可复用)。
+ *  记下最近一次的服务端传输(P3a 测试关它来模拟断链) */
+let lastServerTransport: Transport | null = null
 function makeFakeClientTransport(): Transport {
   const server = new Server({ name: 'fake', version: '1.0.0' }, { capabilities: { tools: {} } })
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -62,6 +64,7 @@ function makeFakeClientTransport(): Transport {
   })
   const [clientT, serverT] = InMemoryTransport.createLinkedPair()
   void server.connect(serverT)
+  lastServerTransport = serverT
   return clientT
 }
 
@@ -139,6 +142,8 @@ describe('MCP 连接器全链(InMemory 假服务器)', () => {
     approvalDecision = 'denied'
     const denied = await callMcpToolWithApproval(momo, boom, {})
     expect(denied).toContain('没有同意')
+    // 防绕过协议(2026-11-19):拒绝回执必须带上「不得换工具/写法达到同一效果」尾句
+    expect(denied).toContain('不要改用别的工具、脚本或写法去达到同一效果')
     approvalDecision = 'aborted'
     const aborted = await callMcpToolWithApproval(momo, boom, {})
     expect(aborted).toContain('已停止')
@@ -160,5 +165,31 @@ describe('MCP 连接器全链(InMemory 假服务器)', () => {
     expect(again.specs.length).toBe(2)
     const echo = again.specs.find((s) => s.function.name.includes('echo'))!.function.name
     expect(await callMcpToolWithApproval(momo, echo, { text: 'a' })).toBe('echo:{"text":"a"}')
+  })
+
+  it('P3a last-known-good:断链保留工具快照,tools 注入稳定,陈旧调用走人话报错', async () => {
+    const id = await addAssignedConnector()
+    await warmMcpToolsForBot('momo')
+    const before = JSON.stringify(mcpToolSpecsFor(momo).specs)
+    expect(mcpToolSpecsFor(momo).specs).toHaveLength(2)
+    const { connectorRuntimeStatus } = await import('../../src/main/mcp-manager')
+    // 服务端掉线:client.onclose 置 stopped,但工具快照必须保留(P3a)
+    await lastServerTransport!.close()
+    expect(connectorRuntimeStatus(id).status).toBe('stopped')
+    expect(JSON.stringify(mcpToolSpecsFor(momo).specs)).toBe(before)
+    // 重连也失败(传输工厂直接抛):error 态进退避,快照仍保留
+    setMcpTransportFactoryForTests(() => {
+      throw new Error('fetch failed')
+    })
+    await warmMcpToolsForBot('momo')
+    expect(connectorRuntimeStatus(id).status).toBe('error')
+    // 缓存契约本体:失联期间 tools 数组逐字节不变,不打穿 prompt cache 前缀
+    expect(JSON.stringify(mcpToolSpecsFor(momo).specs)).toBe(before)
+    // 陈旧清单上的调用:退避期人话报错(模型收到报错换思路,不炸回合)
+    const stale = await callMcpToolWithApproval(momo, `mcp__${mcpSlug('瑞幸咖啡')}__echo`, { text: 'x' })
+    expect(stale).toContain('瑞幸咖啡')
+    // invalidate 才是唯一清快照的路径(改配/停用/删除语义)
+    invalidateMcpConnector(id)
+    expect(mcpToolSpecsFor(momo).specs).toHaveLength(0)
   })
 })

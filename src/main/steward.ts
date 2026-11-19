@@ -230,8 +230,6 @@ export function buildContextMessages(
     { role: 'system', content: parts.stable },
     { role: 'system', content: parts.runtime }
   ]
-  const memory = memoryNote(bot.id)
-  if (memory) messages.push({ role: 'system', content: memory })
   const cutoff = session.cutoffId ?? 0
   if (session.summary && cutoff > 0) {
     messages.push({
@@ -255,6 +253,11 @@ export function buildContextMessages(
       prev = m
     }
   }
+  // 记忆挂消息侧(2026-11-19,借 Linger,推翻 2026-11-18 工程化方案的「不挪」决定):
+  // 记忆每回合可能变,放在历史之前会让任何一次记忆写入打穿其后全部历史的 provider 缓存;
+  // 挪到历史之后与当前时间行同区,变化只落在末尾几十 token,前缀(S1/S2/检查点/逐字历史)稳定
+  const memory = memoryNote(bot.id)
+  if (memory) messages.push({ role: 'system', content: memory })
   // 当前时间行(件 2):最后一条消息之后——模型据此把上面的时间锚换算成"刚才/昨天/前天"
   messages.push({ role: 'system', content: currentTimeLine() })
   return messages

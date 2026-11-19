@@ -678,6 +678,10 @@ export const en: typeof zh = {
     turnProcessExpanded: 'Expanded',
     turnProcessHint:
       'How tool calls, DMs and file activity appear while a resident works. Click the "working" chip to expand at any time',
+    // Nightly memory curation (2026-11-19, Linger-inspired): validated-curation toggle, on by default
+    memoryCurationLabel: 'Nightly memory curation',
+    memoryCurationHint:
+      'Each night, memories are tidied automatically: duplicates merged, stale wording rewritten, lapsed entries removed. Only existing entries are touched, removed ones are archived, and you can review everything on the memory page',
     // Carded section titles (2026-11-09): quiet gray, sitting on the background; owner card removed
     cardIslandTitle: 'Island info',
     cardPrefsTitle: 'Preferences',

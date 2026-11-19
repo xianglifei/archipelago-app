@@ -82,6 +82,9 @@ export const IPC = {
   /** 看板偏好与设置(2026-11-19 第二批):视图/已完成折叠走 meta KV,收尾提示词模板同存 */
   CardsPrefsGet: 'arch:cards:prefs:get',
   CardsPrefsSet: 'arch:cards:prefs:set',
+  /** 记忆偏好(2026-11-19 Linger 借鉴批次③):夜间受校验整理开关 */
+  MemoryPrefsGet: 'arch:memory:prefs:get',
+  MemoryPrefsSet: 'arch:memory:prefs:set',
   ExchangeDetail: 'arch:exchange:detail',
   SettingsGet: 'arch:settings:get',
   SettingsSave: 'arch:settings:save',

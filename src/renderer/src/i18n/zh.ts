@@ -678,6 +678,10 @@ export const zh = {
     turnProcessCollapsed: '默认折叠',
     turnProcessExpanded: '默认展开',
     turnProcessHint: '居民回消息时,工具调用、私信、文件操作等过程明细的默认展示;随时可点「工作中」签展开看全程',
+    // 夜间记忆整理(2026-11-19 Linger 借鉴):受校验整理开关,缺省开
+    memoryCurationLabel: '夜间记忆整理',
+    memoryCurationHint:
+      '每天夜里自动梳理一遍记忆:合并重复、改写过期表述、剔除失效条目;只整理已有内容,被移出的旧条目会归档留痕,记忆页随时可看',
     // 卡片化小节标题(2026-11-09):灰色常规体裸在背景上;归属卡撤下,账号信息归设备连接页
     cardIslandTitle: '岛的信息',
     cardPrefsTitle: '偏好',

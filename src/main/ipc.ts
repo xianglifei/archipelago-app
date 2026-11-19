@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { statSync } from 'node:fs'
 import type {
-  AttachmentIntakeItem, BootState, BoardCard, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, CardActionResult, CardInput, CardsPrefs, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, FilesOpenWithFail, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
+  AttachmentIntakeItem, BootState, BoardCard, BotCapability, BotFileEntry, BotPatch, BotSkillEntry, BotTask, CardActionResult, CardInput, CardsPrefs, ChatExportInput, ChatQuote, ConnectorDetail, ConversationPreview, CreateBotInput, IslandConnectorSummary, IslandSkillDetail, IslandSkillSummary, FilesOpenWithFail, ImageFullReadResult, ImageReadResult, MdTextReadResult, OfficialCatalogData, CreateGroupInput, CreditsSnapshot, ExchangeDetail, MemoryPrefs, MessageAttachment, OwnerProfileState, OwnerSection, PostInviteInfo, TaskThreadInfo, PostInviteParsed, PostLetter, PostOverview, PostSendInput, RedeemResult, SeaLoginNext, SeaSessionState, SettingsSaveInput, SettingsState, TestConnectionInput, TestResult, UiLanguage, UpdateGroupInput, UpdatePrefsPatch, WizardGrantInfo, WizardInput, WizardResult
 } from '@shared/types'
 import { EV, IPC } from '@shared/ipc-channels'
 import { getProvider } from '@shared/providers'
@@ -36,6 +36,7 @@ import { botCapabilities } from './tools'
 import { botTaskEntries, cancelTaskByOwner } from './tasks'
 import { closeTaskThread, createTaskThread, getTaskThread, listTaskThreads, renameTaskThread } from './task-threads'
 import { cardDone, cardsPrefsGet, cardsPrefsSet, createCard, deleteCard, listCards, runCard, undoneCard, updateCard } from './kanban'
+import { memoryPrefsGet, memoryPrefsSave } from './memory-curation'
 import { bindTaskWorkdir, releaseTaskWorkdir } from './task-workdir'
 import {
   botSkillEntries,
@@ -628,6 +629,11 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.CardsPrefsGet, (): CardsPrefs & { finishPromptDefault: string } => cardsPrefsGet())
 
   ipcMain.handle(IPC.CardsPrefsSet, (_e, patch: Partial<CardsPrefs>): CardsPrefs => cardsPrefsSet(patch))
+
+  // 记忆偏好(Linger 借鉴批次③ 2026-11-19):夜间受校验整理开关,缺省开
+  ipcMain.handle(IPC.MemoryPrefsGet, (): MemoryPrefs => memoryPrefsGet())
+
+  ipcMain.handle(IPC.MemoryPrefsSet, (_e, patch: Partial<MemoryPrefs>): MemoryPrefs => memoryPrefsSave(patch))
 
   // 多选消息导出 Markdown(2026-11-02):主进程查库拼装;save 弹保存对话框写文件,copy 返回 md 文本
   ipcMain.handle(IPC.ChatExport, (_e, input: ChatExportInput) => chatExport(input))

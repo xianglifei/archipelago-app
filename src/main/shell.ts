@@ -5,6 +5,7 @@ import { randomBytes } from 'node:crypto'
 import { StringDecoder } from 'node:string_decoder'
 import { app } from 'electron'
 import type { Bot, SafetyState } from '@shared/types'
+import { DENIED_BYPASS_LINE } from './approval-lines'
 import { requestApproval, type ApprovalScope } from './approval'
 import { audit } from './audit'
 import { metaGet, metaSet } from './store'
@@ -203,7 +204,7 @@ export async function runCommandTool(
     if (decision === 'aborted') return '本次回合已停止,命令未执行。'
     if (decision === 'denied') {
       audit(bot.id, 'run_command.denied', { command, reason: verdict.reason })
-      return `岛主拒绝了这条命令(${verdict.reason})。可以换一种不触碰红线的做法;如果确实需要,请岛主自己执行,不要原样重试。`
+      return `岛主拒绝了这条命令(${verdict.reason})。可以换一种不触碰红线的做法;${DENIED_BYPASS_LINE}`
     }
   }
 

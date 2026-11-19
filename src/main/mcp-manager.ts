@@ -152,11 +152,12 @@ async function connectOne(connectorId: string, transport: McpTransport, config: 
   for (const candidate of candidates) {
     const client = new Client({ name: 'Archipelago', version: '1.0.0' })
     client.onclose = () => {
-      // HTTP 无常驻连接,close 是正常收尾;stdio 掉线才算事故。都清缓存,下次调用重连
+      // HTTP 无常驻连接,close 是正常收尾;stdio 掉线才算事故。清连接下次调用重连,
+      // 但保留 last-known-good 工具快照(P3a 2026-11-19):间歇失联期间 tools 数组稳定,
+      // 不打穿 prompt cache 前缀;快照只在 invalidateMcpConnector/closeAllMcp 才清
       const cur = conns.get(connectorId)
       if (cur?.client === client) {
         cur.client = null
-        cur.tools = null
         if (cur.status === 'ready') cur.status = 'stopped'
       }
     }
@@ -206,12 +207,12 @@ async function ensureClient(
       return await connectOne(connectorId, transport, config)
     } catch (err) {
       // entry 已被 invalidate/重建(连接期间停用改配)时,错误态只写回还是本代理的那份,
-      // 不污染新配置的新 entry
+      // 不污染新配置的新 entry。工具快照保留(P3a):连不上不等于能力清单变了,
+      // 陈旧清单的最坏后果=模型收到一次人话报错换思路
       if (conns.get(connectorId) === e) {
         e.status = 'error'
         e.lastError = err instanceof Error ? err.message : String(err)
         e.client = null
-        e.tools = null
         e.nextAttemptAt = Date.now() + (BACKOFF_MS[Math.min(e.attempts, BACKOFF_MS.length - 1)] ?? 60_000)
         e.attempts += 1
       }
@@ -254,15 +255,18 @@ export interface ConnectorRuntimeInfo {
 }
 
 /** 暖连接+刷新工具缓存(回合开始前调用;全部异常吞进状态,绝不打断回合)。
- *  已 ready 且有缓存的直接跳过(稳态零请求,prompt cache 前缀稳定) */
+ *  已 ready 且有缓存的直接跳过(稳态零请求,prompt cache 前缀稳定)。
+ *  重拉时机(P3a 2026-11-19):无快照,或本次从 error/stopped 重建了连接——
+ *  失联期间沿用 last-known-good,恢复后第一时间刷新 */
 export async function warmMcpConnectors(items: ConnectorRuntimeInfo[]): Promise<void> {
   await Promise.all(
     items.map(async (it) => {
       const e = entryOf(it.connectorId)
-      if (e.client && e.status === 'ready' && e.tools) return
+      const wasReady = !!e.client && e.status === 'ready'
+      if (wasReady && e.tools) return
       try {
         const client = await ensureClient(it.connectorId, it.transport, it.config)
-        if (!e.tools) await refreshTools(it.connectorId, client)
+        if (!e.tools || !wasReady) await refreshTools(it.connectorId, client)
       } catch {
         // 状态与 lastError 已在 ensureClient 里落好;UI 可见,不打断回合
       }
@@ -270,7 +274,8 @@ export async function warmMcpConnectors(items: ConnectorRuntimeInfo[]): Promise<
   )
 }
 
-/** toolsFor 组装用:某连接器当前缓存的工具(没有=没连上,本轮不注入) */
+/** toolsFor 组装用:某连接器当前缓存的工具。没连上但留有 last-known-good 清单的照常注入
+ *  (以实际调用报错为准);真正没清单的(从未连上/已 invalidate)才不注入 */
 export function cachedConnectorTools(connectorId: string): McpToolInfo[] {
   return entryOf(connectorId).tools ?? []
 }
@@ -314,8 +319,8 @@ export async function invokeMcpTool(
       // 保守起见不动连接(服务端业务错也会走到这),只有异常形态才重置:
       if (/fetch failed|socket hang up|ECONN|EPIPE|session/i.test(err instanceof Error ? err.message : String(err))) {
         try { await e.client.close() } catch { /* 尽力而为 */ }
+        // 连接重置,工具快照保留(P3a last-known-good)
         e.client = null
-        e.tools = null
         e.status = 'stopped'
       }
     }

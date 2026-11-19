@@ -46,6 +46,8 @@ export default function SettingsModal({
   const [error, setError] = useState<string | null>(null)
   // 回合过程默认折叠/展开(2026-11-08 设置项):null=尚未读到
   const [turnProcessExpanded, setTurnProcessExpanded] = useState<boolean | null>(null)
+  // 夜间记忆整理开关(2026-11-19 Linger 借鉴批次③):null=尚未读到,缺省开
+  const [memoryCuration, setMemoryCuration] = useState<boolean | null>(null)
   // 即时保存的家伙什:跳过首载回显触发 / 晚归旧响应丢弃 / 上一个已存值(空值回填与脏判定)
   const skipEchoRef = useRef(true)
   const saveSeqRef = useRef(0)
@@ -74,6 +76,11 @@ export default function SettingsModal({
         // 读失败退回模块缓存兜底(未加载=默认折叠),不让按钮永久禁用;点按本身即重试
         setTurnProcessExpanded(turnProcessPrefExpanded())
       })
+    // 夜间记忆整理(2026-11-19):读失败退回缺省开,开关不至于永久禁用
+    api
+      .memoryPrefsGet()
+      .then((p) => setMemoryCuration(p.curationEnabled))
+      .catch(() => setMemoryCuration(true))
   }, [])
 
   // 看过「关于」页签即消红点
@@ -98,6 +105,17 @@ export default function SettingsModal({
       // 写失败回滚控件与缓存(codex 评审):别让界面停在没落库的值上
       setTurnProcessExpanded(prev)
       if (prev !== null) cacheTurnProcessPref(prev)
+      console.error(err)
+    })
+  }
+
+  // 夜间记忆整理开关(2026-11-19):即时生效不走「保存」,写失败回滚控件
+  function switchMemoryCuration(v: boolean): void {
+    if (v === memoryCuration) return
+    const prev = memoryCuration
+    setMemoryCuration(v)
+    api.memoryPrefsSet({ curationEnabled: v }).catch((err) => {
+      if (prev !== null) setMemoryCuration(prev)
       console.error(err)
     })
   }
@@ -314,6 +332,27 @@ export default function SettingsModal({
                       {t('settings.turnProcessExpanded')}
                     </button>
                   </div>
+                </div>
+                {/* 夜间记忆整理(2026-11-19 Linger 借鉴批次③):每日 00:30 受校验整理,缺省开 */}
+                <div className="settings-card-row">
+                  <span className="toggle-title qmark-host">
+                    {t('settings.memoryCurationLabel')}
+                    <span
+                      className="qmark"
+                      data-tip={t('settings.memoryCurationHint')}
+                      tabIndex={0}
+                      aria-label={t('settings.memoryCurationHint')}
+                    >
+                      <CircleHelp size={13} />
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    className="switch"
+                    checked={memoryCuration ?? true}
+                    disabled={memoryCuration === null}
+                    onChange={(e) => switchMemoryCuration(e.target.checked)}
+                  />
                 </div>
               </div>
 

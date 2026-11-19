@@ -3,6 +3,8 @@
 // prompt cache 前缀」的机制前提,单独锁死;管家提示词是固定常量,golden 锁漂移;
 // promptTokensBySection(FR3)按段累加,压缩事件 tokensBySection 的口径由此锚定。
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { ChatMessage } from '@shared/types'
 import {
   currentTimeLine,
@@ -12,6 +14,9 @@ import {
   timeAnchor
 } from '../../src/main/steward'
 import { buildStewardUserPrompt, STEWARD_SYSTEM_PROMPT } from '../../src/main/prompts'
+import { DENIED_BYPASS_LINE } from '../../src/main/approval-lines'
+
+const ROOT = join(__dirname, '..', '..', 'src', 'main')
 
 const msg = (kind: ChatMessage['kind']): ChatMessage => ({
   id: 1,
@@ -92,6 +97,23 @@ describe('STEWARD_SYSTEM_PROMPT:管家提示词 golden', () => {
   it('管家 user prompt:旧摘要前缀合入,无旧摘要直进正文', () => {
     expect(buildStewardUserPrompt(null, 'T')).toBe('【需要压缩的对话】\nT')
     expect(buildStewardUserPrompt('旧', 'T')).toBe('【已有旧摘要,请合并进来】\n旧\n\n【需要压缩的对话】\nT')
+  })
+})
+
+describe('DENIED_BYPASS_LINE:审批防绕过尾句(2026-11-19 借 Linger)', () => {
+  it('golden 逐字锁定(拒绝挡的是同一效果:禁原样重试+禁绕过+唯一出路岛主自己来)', () => {
+    expect(DENIED_BYPASS_LINE).toBe(
+      '不要原样重试,也不要改用别的工具、脚本或写法去达到同一效果;确需执行,请岛主自己来。'
+    )
+  })
+  it('源码契约:run_command/写围栏/MCP 三处执行类拒绝必须引用该常量(管理类工具不在此列)', () => {
+    for (const rel of ['shell.ts', 'fs-tools.ts', 'mcp.ts']) {
+      const src = readFileSync(join(ROOT, rel), 'utf8')
+      expect(src, `${rel} 应引用 DENIED_BYPASS_LINE`).toContain('${DENIED_BYPASS_LINE}')
+    }
+    // S2 权限档位行持有同一语义的完整版(与常量同调),锁关键词防单边漂移
+    const prompts = readFileSync(join(ROOT, 'prompts.ts'), 'utf8')
+    expect(prompts).toContain('不要改用别的工具或写法去达到同一效果')
   })
 })
 

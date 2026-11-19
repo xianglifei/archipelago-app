@@ -5,6 +5,7 @@ import { registerIpc } from './ipc'
 import { initUpdater } from './updater'
 import { initTaskScheduler } from './tasks'
 import { initPostPoller } from './post'
+import { initMemoryCuration } from './memory-curation'
 import { logDiag } from './diag'
 import { uiStr } from './ui-strings'
 import { onUiLanguageChanged } from './ui-language'
@@ -265,6 +266,9 @@ if (!gotLock) {
     initTaskScheduler()
     // 邮局轮询器(2026-10-29):120s 拉一次信箱 + 唤醒/聚焦补拉;未登录/未绑岛静默
     initPostPoller()
+    // 夜间记忆整理(2026-11-19 Linger 借鉴批次③):每日 00:30 对脏 scope 受校验整理;
+    // 干净零成本跳过,未登录凭证全空自然静默,设置页偏好卡可关
+    initMemoryCuration()
 
     app.on('activate', () => {
       // 判主窗自身而非全窗口数(2026-11-06 codex 审查修复):md 阅读器/图片查看器等独立窗
